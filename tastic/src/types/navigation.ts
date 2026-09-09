@@ -4,6 +4,8 @@ import type { ContentCategory, Content, ConversationEntry } from "./database";
 export type RootStackParamList = {
   Loading: undefined;
   Auth: undefined;
+  // 복구 링크로 들어온 세션 위에서만 뜨는 화면이라 Auth 스택이 아닌 최상위에 둔다.
+  ResetPassword: undefined;
   ProfileError: undefined;
   Onboarding: undefined;
   IntroTour: undefined;
@@ -14,6 +16,8 @@ export type RootStackParamList = {
 export type AuthStackParamList = {
   Login: undefined;
   SignUp: undefined;
+  // 로그인 화면에서 입력하던 이메일을 그대로 넘겨 다시 치지 않게 한다.
+  ForgotPassword: { email?: string } | undefined;
 };
 
 // Main Bottom Tabs

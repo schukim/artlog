@@ -1,0 +1,40 @@
+<!--
+  가입 확인 메일 (Supabase Auth: Confirm signup)
+
+  대시보드 → Authentication → Emails → Confirm signup 에 붙여넣는다.
+  ISSUE-010(미인증 계정이 로그인에 막힘)의 입구가 이 메일이라, 재설정 메일과 함께
+  한글화한다. 인증 링크도 재설정과 같은 PKCE 제약을 받는다 — 휴대폰에서 열어야 한다.
+-->
+<div style="font-family: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; max-width: 480px; margin: 0 auto; padding: 32px 24px; color: #1F1B16;">
+  <h1 style="font-size: 22px; font-weight: 700; margin: 0 0 16px;">이메일 인증</h1>
+
+  <p style="font-size: 15px; line-height: 1.7; margin: 0 0 24px; color: #4A443C;">
+    Tastic 가입을 환영합니다.<br />
+    아래 버튼을 눌러 이메일 인증을 완료하시면 바로 시작할 수 있습니다.
+  </p>
+
+  <p style="margin: 0 0 24px;">
+    <a href="{{ .ConfirmationURL }}"
+       style="display: inline-block; background: #6366F1; color: #FFFFFF; text-decoration: none; font-size: 16px; font-weight: 600; padding: 14px 28px; border-radius: 12px;">
+      이메일 인증하기
+    </a>
+  </p>
+
+  <div style="background: #F5F2ED; border-radius: 12px; padding: 16px; margin: 0 0 24px;">
+    <p style="font-size: 14px; line-height: 1.7; margin: 0; color: #4A443C;">
+      📱 <strong>Tastic 앱을 설치한 휴대폰에서 링크를 열어주세요.</strong><br />
+      가입을 진행한 기기에서 열어야 자동으로 로그인됩니다.
+    </p>
+  </div>
+
+  <p style="font-size: 13px; line-height: 1.7; margin: 0 0 8px; color: #8A8378;">
+    이 링크는 1시간 동안 유효합니다. 만료되었다면 앱의 로그인 화면에서
+    '이메일 다시 보내기'로 새 인증 메일을 받을 수 있습니다.
+  </p>
+  <p style="font-size: 13px; line-height: 1.7; margin: 0; color: #8A8378;">
+    본인이 가입하지 않았다면 이 메일을 무시하셔도 됩니다.
+  </p>
+
+  <hr style="border: none; border-top: 1px solid #E5E0D8; margin: 32px 0 16px;" />
+  <p style="font-size: 12px; color: #A8A196; margin: 0;">Tastic</p>
+</div>

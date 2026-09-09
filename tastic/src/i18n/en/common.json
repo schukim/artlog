@@ -41,7 +41,37 @@
     "resendEmailFailedTitle": "Send Failed",
     "goToLogin": "Go to Login",
     "socialLoginErrorTitle": "{{provider}} sign-in error",
-    "socialLoginFailed": "{{provider}} sign-in failed"
+    "socialLoginFailed": "{{provider}} sign-in failed",
+    "forgotPassword": "Forgot your password?",
+    "errors": {
+      "invalidCredentials": "Invalid email or password",
+      "emailNotConfirmed": "Your email isn't verified yet. Please open the link in the email we sent.",
+      "rateLimited": "Too many requests. Please try again in a moment.",
+      "samePassword": "Please choose a password different from your previous one",
+      "weakPassword": "Password must be at least 8 characters",
+      "network": "Please check your network connection",
+      "unknown": "Something went wrong. Please try again in a moment."
+    },
+    "resetPassword": {
+      "title": "Reset password",
+      "subtitle": "Enter the email you signed up with and we'll send you a link to set a new password.",
+      "sendButton": "Send reset link",
+      "sendFailed": "Failed to send the email. Please try again in a moment.",
+      "sentTitle": "Email sent",
+      "sentMessage": "We sent a password reset link to {{email}}.\nIf you don't see it, check your spam folder.",
+      "sameDeviceNotice": "📱 Open the link on this phone.\nIt won't work if you open it on another device, such as a computer.",
+      "resend": "Send the email again",
+      "newTitle": "Set a new password",
+      "newSubtitle": "Enter the password you'll use from now on.",
+      "newPassword": "New password",
+      "mismatch": "Passwords don't match",
+      "submit": "Change password",
+      "doneTitle": "Password changed",
+      "doneMessage": "Your password has been changed.",
+      "expiredTitle": "This link has expired",
+      "expiredMessage": "The link is no longer valid, or it was opened on a device other than the one that requested the reset. Please request a new one from this phone.",
+      "retry": "Request again"
+    }
   },
   "onboarding": {
     "title": "Complete your profile",

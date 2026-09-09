@@ -238,6 +238,17 @@ otp_expiry = 3600
 # subject = "You have been invited"
 # content_path = "./supabase/templates/invite.html"
 
+# 한글 메일 템플릿. 실제 발송은 리모트(대시보드 Authentication → Emails) 설정을 따르고,
+# 아래는 로컬 개발과 형상 관리를 위한 사본이다 — 대시보드를 고칠 때 이 파일도 같이 고친다.
+# (`supabase db push` 는 config 를 밀지 않는다. 리모트 반영은 대시보드에서 수동.)
+[auth.email.template.recovery]
+subject = "[Tastic] 비밀번호 재설정"
+content_path = "./supabase/templates/recovery.html"
+
+[auth.email.template.confirmation]
+subject = "[Tastic] 이메일 인증을 완료해주세요"
+content_path = "./supabase/templates/confirmation.html"
+
 # Uncomment to customize notification email template
 # [auth.email.notification.password_changed]
 # enabled = true

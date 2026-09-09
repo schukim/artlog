@@ -1,0 +1,44 @@
+<!--
+  비밀번호 재설정 메일 (Supabase Auth: Reset Password)
+
+  대시보드 → Authentication → Emails → Reset Password 에 이 내용을 그대로 붙여넣는다.
+  리모트가 실제 발송 주체이고, 이 파일은 형상 관리·로컬 개발용 사본이다.
+
+  ⚠️ 본문의 "휴대폰에서 열어주세요" 문구는 장식이 아니다. 앱이 PKCE 플로우라
+  code_verifier 가 재설정을 요청한 기기에만 저장된다 — PC 메일에서 링크를 열면
+  교환이 실패한다. 앱 화면에서도 같은 안내를 하지만, 정작 링크를 누르는 순간은
+  메일 안이라 여기에도 반드시 있어야 한다.
+-->
+<div style="font-family: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; max-width: 480px; margin: 0 auto; padding: 32px 24px; color: #1F1B16;">
+  <h1 style="font-size: 22px; font-weight: 700; margin: 0 0 16px;">비밀번호 재설정</h1>
+
+  <p style="font-size: 15px; line-height: 1.7; margin: 0 0 24px; color: #4A443C;">
+    Tastic 계정의 비밀번호 재설정이 요청되었습니다.<br />
+    아래 버튼을 눌러 새 비밀번호를 설정해주세요.
+  </p>
+
+  <p style="margin: 0 0 24px;">
+    <a href="{{ .ConfirmationURL }}"
+       style="display: inline-block; background: #6366F1; color: #FFFFFF; text-decoration: none; font-size: 16px; font-weight: 600; padding: 14px 28px; border-radius: 12px;">
+      새 비밀번호 설정하기
+    </a>
+  </p>
+
+  <div style="background: #F5F2ED; border-radius: 12px; padding: 16px; margin: 0 0 24px;">
+    <p style="font-size: 14px; line-height: 1.7; margin: 0; color: #4A443C;">
+      📱 <strong>Tastic 앱을 설치한 휴대폰에서 링크를 열어주세요.</strong><br />
+      보안을 위해 재설정을 요청한 기기에서만 링크가 동작합니다.
+      PC 등 다른 기기에서 열면 링크가 만료된 것으로 표시됩니다.
+    </p>
+  </div>
+
+  <p style="font-size: 13px; line-height: 1.7; margin: 0 0 8px; color: #8A8378;">
+    이 링크는 1시간 동안 유효하며, 한 번만 사용할 수 있습니다.
+  </p>
+  <p style="font-size: 13px; line-height: 1.7; margin: 0; color: #8A8378;">
+    본인이 요청하지 않았다면 이 메일을 무시하셔도 됩니다. 비밀번호는 변경되지 않습니다.
+  </p>
+
+  <hr style="border: none; border-top: 1px solid #E5E0D8; margin: 32px 0 16px;" />
+  <p style="font-size: 12px; color: #A8A196; margin: 0;">Tastic</p>
+</div>

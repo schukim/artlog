@@ -12,10 +12,14 @@ interface AuthState {
   user: User | null;
   isLoading: boolean;
   profileStatus: ProfileStatus;
+  // 비밀번호 재설정 링크로 들어왔음을 표시한다. 켜져 있는 동안에는 세션이 있어도
+  // Main 으로 보내지 않고 새 비밀번호 화면에 머문다(resolveAuthRoute).
+  passwordRecovery: boolean;
   setSession: (session: Session | null) => void;
   setUser: (user: User | null) => void;
   setLoading: (loading: boolean) => void;
   setProfileStatus: (status: ProfileStatus) => void;
+  setPasswordRecovery: (active: boolean) => void;
   reset: () => void;
 }
 
@@ -24,9 +28,18 @@ export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   isLoading: true,
   profileStatus: "loading",
+  passwordRecovery: false,
   setSession: (session) => set({ session }),
   setUser: (user) => set({ user }),
   setLoading: (isLoading) => set({ isLoading }),
   setProfileStatus: (profileStatus) => set({ profileStatus }),
-  reset: () => set({ session: null, user: null, isLoading: false, profileStatus: "loading" }),
+  setPasswordRecovery: (passwordRecovery) => set({ passwordRecovery }),
+  reset: () =>
+    set({
+      session: null,
+      user: null,
+      isLoading: false,
+      profileStatus: "loading",
+      passwordRecovery: false,
+    }),
 }));

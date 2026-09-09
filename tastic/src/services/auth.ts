@@ -12,6 +12,17 @@ export function getAuthCodeFromUrl(url: string): string | null {
   return match ? decodeURIComponent(match[1]) : null;
 }
 
+// 비밀번호 재설정 메일의 콜백 경로. 가입 확인(auth/callback)과 **반드시 달라야** 한다 —
+// 경로가 같으면 세션만 만들어지고 그대로 Main 으로 들어가, 새 비밀번호를 정할 화면을
+// 영영 못 본다. 이 경로로 들어온 링크만 복구 플로우로 분기한다(useDeepLinkAuth).
+export const RESET_PASSWORD_PATH = "auth/reset-password";
+
+// Expo Go(exp://...--/auth/reset-password)와 standalone(tastic://auth/reset-password)의
+// 형태가 달라 경로 문자열 포함 여부로 판별한다.
+export function isRecoveryUrl(url: string): boolean {
+  return url.includes(RESET_PASSWORD_PATH);
+}
+
 // 하나의 인증 코드가 두 경로에서 동시에 교환되는 것을 막는다.
 // OAuth 콜백은 WebBrowser.openAuthSessionAsync 의 반환 URL 로도 오고, 안드로이드(Custom Tabs)에서는
 // 전역 딥링크 리스너(useDeepLinkAuth)로도 온다. 둘이 같은 code 를 exchangeCodeForSession 에 넘기면
@@ -73,6 +84,29 @@ export async function resendConfirmation(email: string) {
     type: 'signup',
     email: email,
   });
+  if (error) throw error;
+  return data;
+}
+
+// 비밀번호 재설정 메일 발송.
+//
+// 계정이 없는 이메일이어도 에러를 던지지 않는다(Supabase 도 동일하게 성공을 준다) —
+// 화면은 항상 같은 안내를 보여줘야 한다. 여기서 "없는 계정입니다"를 노출하면
+// 가입 여부를 확인하는 계정 열거(enumeration) 통로가 된다.
+//
+// 링크는 PKCE 라서 **요청한 기기에서** 열어야 한다. code_verifier 가 그 기기
+// AsyncStorage 에만 있기 때문. 다른 기기(PC 메일)에서 열면 교환이 실패하므로
+// 화면 안내와 ResetPasswordScreen 의 만료 처리로 받아낸다.
+export async function requestPasswordReset(email: string) {
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: makeRedirectUri({ path: RESET_PASSWORD_PATH }),
+  });
+  if (error) throw error;
+}
+
+// 복구 링크로 만들어진 세션 위에서 새 비밀번호를 확정한다.
+export async function updatePassword(newPassword: string) {
+  const { data, error } = await supabase.auth.updateUser({ password: newPassword });
   if (error) throw error;
   return data;
 }

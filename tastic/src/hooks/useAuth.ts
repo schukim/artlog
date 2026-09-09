@@ -86,8 +86,16 @@ export function useAuth() {
             // RevenueCat appUserID를 맞춘 뒤(웹훅 매핑), 스토어 실제 구독 상태로 plan을 정합화.
             // iOS 만료 웹훅이 늦거나 유실돼도 앱이 스스로 만료를 반영한다(다운그레이드 전용).
             void identifyPurchasesUser(session.user.id).then(() => reconcileSubscription());
-            // 게스트로 둘러보다 로그인한 경우 — 보관 중인 평론을 이 계정으로 이전
-            void finishGuestTrial(session.user);
+            // 게스트로 둘러보다 로그인한 경우 — 보관 중인 평론을 이 계정으로 이전.
+            //
+            // 단, 비밀번호 재설정 링크로 만들어진 세션에서는 미룬다. 이 세션은 "로그인
+            // 하겠다"가 아니라 "비밀번호를 바꾸겠다"는 의사이고, 기존 계정이면
+            // finishGuestTrial 이 보관 중인 체험 평론을 정리해버린다 — 사용자는 재설정만
+            // 하려다 써둔 평론을 잃는다. 보관분은 남겨두고, 다음 실행의 getSession 경로가
+            // 같은 처리를 이어받는다.
+            if (!useAuthStore.getState().passwordRecovery) {
+              void finishGuestTrial(session.user);
+            }
             Sentry.setUser({ id: session.user.id });
           } else {
             setUser(null);

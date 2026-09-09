@@ -14,8 +14,14 @@ import { useTranslation } from "react-i18next";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { AuthStackParamList } from "../../types/navigation";
-import { signIn, signInWithGoogle, signInWithApple } from "../../services/auth";
+import {
+  signIn,
+  signInWithGoogle,
+  signInWithApple,
+  resendConfirmation,
+} from "../../services/auth";
 import { useGuestStore } from "../../stores/guestStore";
+import { authErrorMessageKey, classifyAuthError } from "../../utils/authErrors";
 
 type Nav = NativeStackNavigationProp<AuthStackParamList, "Login">;
 
@@ -27,6 +33,10 @@ export function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // 미인증 계정일 때만 '인증 메일 재전송'을 띄운다. 이전에는 재전송 버튼이 가입 직후
+  // 화면(SignUpScreen step 3)에만 있어서, 앱을 한 번이라도 껐다 켠 미인증 사용자는
+  // 앱 안에서 빠져나갈 방법이 전혀 없었다.
+  const [needsConfirmation, setNeedsConfirmation] = useState(false);
   const resumeGuest = useGuestStore((s) => s.resumeGuest);
   const cameFromGuest = useGuestStore((s) => s.cameFromGuest);
   const hasPendingReview = useGuestStore((s) => s.hasPendingReview);
@@ -39,11 +49,35 @@ export function LoginScreen() {
     if (!isValid) return;
     setLoading(true);
     setError(null);
+    setNeedsConfirmation(false);
     try {
       await signIn(email, password);
     } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : t("auth.loginError");
-      setError(message);
+      // 서버 원문(`e.message`)을 그대로 뿌리면 "Invalid login credentials" 같은 영어가
+      // 노출된다. 로그인 실패는 대부분 사용자가 스스로 풀어야 하는 상황이라
+      // 무슨 일인지와 다음 행동이 한국어로 보여야 한다.
+      const kind = classifyAuthError(e);
+      setError(t(authErrorMessageKey(e)));
+      setNeedsConfirmation(kind === "emailNotConfirmed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 미인증 안내에서 곧바로 인증 메일을 다시 보낸다. 입력돼 있는 이메일을 쓰므로
+  // 사용자가 주소를 다시 칠 필요가 없다.
+  const handleResendConfirmation = async () => {
+    if (loading) return;
+    setLoading(true);
+    try {
+      await resendConfirmation(email.trim());
+      Alert.alert(t("auth.resendEmailSuccessTitle"), t("auth.resendEmailSuccess"), [
+        { text: t("common.confirm") },
+      ]);
+    } catch (e: unknown) {
+      Alert.alert(t("auth.resendEmailFailedTitle"), t(authErrorMessageKey(e)), [
+        { text: t("common.confirm") },
+      ]);
     } finally {
       setLoading(false);
     }
@@ -118,7 +152,7 @@ export function LoginScreen() {
               placeholder={t("auth.email")}
               placeholderTextColor="#9C9589"
               value={email}
-              onChangeText={(text) => { setEmail(text); setError(null); }}
+              onChangeText={(text) => { setEmail(text); setError(null); setNeedsConfirmation(false); }}
               keyboardType="email-address"
               autoCapitalize="none"
               autoComplete="email"
@@ -133,7 +167,7 @@ export function LoginScreen() {
                 placeholder={t("auth.password")}
                 placeholderTextColor="#9C9589"
                 value={password}
-                onChangeText={(text) => { setPassword(text); setError(null); }}
+                onChangeText={(text) => { setPassword(text); setError(null); setNeedsConfirmation(false); }}
                 secureTextEntry={!showPassword}
                 autoComplete="password"
               />
@@ -153,9 +187,24 @@ export function LoginScreen() {
             <Text className="text-error text-[15px] mb-4">{error}</Text>
           )}
 
+          {/* 미인증 계정 — 앱 안에서 인증 메일을 다시 받을 수 있는 유일한 경로 */}
+          {needsConfirmation && (
+            <Pressable
+              className={`border border-primary rounded-xl py-3.5 items-center mb-4 ${
+                loading ? "opacity-50" : ""
+              }`}
+              onPress={handleResendConfirmation}
+              disabled={loading}
+            >
+              <Text className="text-primary font-semibold text-base">
+                {loading ? "..." : t("auth.resendEmail")}
+              </Text>
+            </Pressable>
+          )}
+
           {/* Login Button */}
           <Pressable
-            className={`rounded-xl py-4 items-center mb-6 ${
+            className={`rounded-xl py-4 items-center mb-4 ${
               isValid && !loading ? "bg-primary" : "bg-primary/40"
             }`}
             onPress={handleLogin}
@@ -165,6 +214,20 @@ export function LoginScreen() {
               {loading ? "..." : t("auth.loginButton")}
             </Text>
           </Pressable>
+
+          {/* 비밀번호 찾기 — 입력 중이던 이메일을 그대로 넘긴다 */}
+          <View className="items-center mb-6">
+            <Pressable
+              onPress={() =>
+                navigation.navigate("ForgotPassword", { email: email.trim() || undefined })
+              }
+              hitSlop={8}
+            >
+              <Text className="text-text-secondary text-[15px] font-medium">
+                {t("auth.forgotPassword")}
+              </Text>
+            </Pressable>
+          </View>
 
           {/* Divider */}
           <View className="flex-row items-center mb-6">
