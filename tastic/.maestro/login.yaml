@@ -25,12 +25,17 @@ appId: com.taewoo.tastic
 - tapOn:
     id: "login-email-input"
 - inputText: ${E2E_EMAIL}
+# 키보드 닫기 — iOS 에서 hideKeyboard 는 불안정하다고 Maestro 가 경고한다.
+# 대신 화면의 정적 텍스트를 탭한다.
+- tapOn:
+    id: "login-title"
 
 - tapOn:
     id: "login-password-input"
 - inputText: ${E2E_PASSWORD}
+- tapOn:
+    id: "login-title"
 
-- hideKeyboard
 - tapOn:
     id: "login-submit-button"
 

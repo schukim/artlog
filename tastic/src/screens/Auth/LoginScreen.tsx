@@ -123,7 +123,7 @@ export function LoginScreen() {
         >
           {/* Logo */}
           <View className="items-center mb-12">
-            <Text className="text-primary text-4xl font-bold">{t("app.name")}</Text>
+            <Text testID="login-title" className="text-primary text-4xl font-bold">{t("app.name")}</Text>
           </View>
 
           {/* 체험 평론 보관 중 경고 — 체험 평론은 새로 만든 계정으로만 옮겨진다.

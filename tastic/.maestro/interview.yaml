@@ -10,13 +10,18 @@ appId: com.taewoo.tastic
 - assertVisible:
     id: "review-home-screen"
 
+# 카테고리를 먼저 고른다 — handleSelectCategory 가 입력 폼을 펼치면서
+# 제목을 초기화(setTitle(""))하므로, 제목을 먼저 넣으면 지워진다.
+- tapOn:
+    id: "category-chip-movie"
+
 - tapOn:
     id: "review-title-input"
 - inputText: ${TITLE}
-- hideKeyboard
-
+# 키보드 닫기 — iOS 에서 hideKeyboard 는 불안정하다고 Maestro 가 경고한다.
+# 대신 홈 화면의 인사말(정적 텍스트)을 탭한다.
 - tapOn:
-    id: "category-chip-movie"
+    id: "review-greeting"
 
 - tapOn:
     id: "review-next-button"
@@ -55,6 +60,5 @@ appId: com.taewoo.tastic
       - tapOn:
           id: "answer-input"
       - inputText: "E2E 자동 답변입니다. 공간의 대비가 인상 깊었고, 인물의 선택이 이해되면서도 불편했습니다."
-      - hideKeyboard
       - tapOn:
           id: "submit-answer-button"

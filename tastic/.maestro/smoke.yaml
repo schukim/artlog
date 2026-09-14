@@ -23,3 +23,20 @@ appId: com.taewoo.tastic
 # 투어를 마치면 로그인 화면에 닿는다 — 탭이 실제로 먹혔다는 증거다.
 - assertVisible:
     id: "login-screen"
+
+# 로그인 화면 계측 확인 — login.yaml 이 기대는 셀렉터들이다.
+# 여기서 미리 깨지면 계정이 필요한 플로우 전체가 같은 이유로 무너진다.
+- assertVisible:
+    id: "login-email-input"
+- assertVisible:
+    id: "login-password-input"
+- assertVisible:
+    id: "login-submit-button"
+
+# 입력이 실제로 먹는지까지 본다(제출은 하지 않는다 — 계정이 필요 없는 선까지만).
+- tapOn:
+    id: "login-email-input"
+- inputText: "e2e-smoke@example.com"
+- tapOn:
+    id: "login-title"
+- assertVisible: "e2e-smoke@example.com"

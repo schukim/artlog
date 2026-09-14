@@ -349,7 +349,10 @@ export function ReviewHomeScreen() {
 
           {/* Greeting */}
           <Animated.View style={greetingStyle}>
-            <Text className="text-text dark:text-text-dark text-2xl font-bold leading-9 mb-6">
+            <Text
+              testID="review-greeting"
+              className="text-text dark:text-text-dark text-2xl font-bold leading-9 mb-6"
+            >
               {/* 게스트는 닉네임이 없어 "{{name}}님," 자리가 비어버린다 — 전용 문구 사용 */}
               {isGuest ? t("guest.greeting") : t("review.greeting", { name: user?.nickname ?? "" })}
             </Text>
