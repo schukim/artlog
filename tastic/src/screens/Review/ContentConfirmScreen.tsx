@@ -48,6 +48,9 @@ export function ContentConfirmScreen() {
   const [manualYear, setManualYear] = useState("");
   // 결과가 글로벌 캐시에서 왔는지 — true일 때만 '재검색' 버튼 노출
   const [cacheHit, setCacheHit] = useState(false);
+  // 캐시 히트가 확정이 아니라 '제안'(제목이 비슷할 뿐)인 경우.
+  // 이때는 후보를 미리 선택하지 않고, 맞는지 묻는 문구를 띄운다 — 판단은 사용자가 한다.
+  const [isSuggestion, setIsSuggestion] = useState(false);
   // 재검색은 플랜 무관 세션당 최대 3회
   const MAX_RESEARCH = 3;
   const [researchCount, setResearchCount] = useState(0);
@@ -79,6 +82,7 @@ export function ContentConfirmScreen() {
       });
       setCandidates(response.candidates);
       setCacheHit(response._debug?.cache_hit === true);
+      setIsSuggestion(response._debug?.suggested === true);
 
       // 웹서칭 출처 확인용 — 실제 인용 도메인/URL을 콘솔에 찍는다(개발 전용).
       // 프로덕션에선 로그 노이즈·메타데이터 노출을 피하기 위해 출력하지 않는다.
@@ -92,8 +96,14 @@ export function ContentConfirmScreen() {
         console.table?.(d.citations);
       }
 
-      // Auto-select if single high-confidence result
-      if (response.candidates.length === 1 && response.candidates[0].confidence === "high") {
+      // 확신 후보가 하나뿐이면 미리 선택해 둔다(카드 하이라이트 — 화면이 넘어가진 않는다).
+      // 제안(제목만 비슷한 캐시 히트)은 제외한다 — 사용자가 제목을 읽고 직접 고르게 한다.
+      // state 는 아직 반영 전이라 응답값을 직접 본다.
+      if (
+        response._debug?.suggested !== true &&
+        response.candidates.length === 1 &&
+        response.candidates[0].confidence === "high"
+      ) {
         setSelectedIndex(0);
       }
     } catch (e) {
@@ -213,6 +223,14 @@ export function ContentConfirmScreen() {
             <SkeletonCard />
             <SkeletonCard />
           </>
+        )}
+
+        {/* 제안 안내: 제목이 비슷할 뿐 확정이 아니라는 것을 분명히 한다.
+            아래 '재검색'으로 웹서치를 강제할 수 있다. */}
+        {!isLoading && isSuggestion && candidates.length > 0 && (
+          <View className="bg-yellow-50 border border-yellow-200 rounded-2xl px-4 py-3 mb-3">
+            <Text className="text-yellow-800 text-[15px]">{t("review.confirm.similarTitle")}</Text>
+          </View>
         )}
 
         {/* Candidate cards */}

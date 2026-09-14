@@ -28,6 +28,8 @@ export interface ContentCandidate {
 export interface VerifyContentDebug {
   // 캐시 히트 여부 — '재검색' 버튼 노출 판단에 사용
   cache_hit?: boolean;
+  // 확정이 아니라 제안(유사도 0.75~0.85)인 캐시 히트. 화면에 "이 작품이 맞나요?"를 띄운다.
+  suggested?: boolean;
   source_work_id?: string;
   similarity?: number;
   ms: number;

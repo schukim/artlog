@@ -38,9 +38,19 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 // 새 API 키 체계 프로젝트에선 SUPABASE_SERVICE_ROLE_KEY가 함수 env에 자동 주입되지 않을 수 있어,
 // 명시적 시크릿 SB_SERVICE_ROLE_KEY를 우선 사용하고 없으면 자동 주입분으로 폴백한다.
 const SERVICE_ROLE_KEY = Deno.env.get("SB_SERVICE_ROLE_KEY") ?? Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-// 임계값 0.85: 근접 매칭으로 false positive가 생길 수 있으나, 캐시 히트 시 클라이언트가
-// '재검색'(skipCache=true) 버튼으로 웹서치를 강제할 수 있어 안전망이 된다.
+// ── 캐시 임계값 2단 ──
+// 확정선(0.85): 사실상 같은 작품으로 보고 confidence "high" 로 돌려준다. 기존 동작.
 const CACHE_SIMILARITY_THRESHOLD = 0.85;
+// 노출선(0.75): 확신은 없지만 "혹시 이 작품인가요?"로 **제안**하는 구간.
+// 이 구간은 confidence "medium" 으로 내려 클라이언트가 자동 선택하지 않게 하고,
+// 화면에도 제안임을 알리는 문구를 띄운다 — 판단은 제목을 읽는 사람이 한다.
+//
+// 왜 자동 확정선을 낮추지 않고 구간을 나눴나: trigram 점수는 제목 길이에 휘둘린다.
+// 같은 's' 하나 차이가 'cat/cats' 0.50, 'feel so good/feels so good' 0.80,
+// 'shawshank/shawshanks' 0.88 이다. 한 임계값으로 "같은 작품"을 판정할 수 없다.
+// 실측상 이 구간엔 동일작(0.80)과 시즌 다른 작품(피의 게임/피의 게임 3, 0.75)이 함께 산다 —
+// 기계는 못 가르지만 사람은 제목만 보고 가른다.
+const CACHE_SUGGEST_THRESHOLD = 0.75;
 
 // ── 질의 메모 캐시 TTL ──
 // works 캐시가 "작품"을 기억한다면 이쪽은 "유저가 친 문자열"을 기억한다. 확정까지 가지 않은
@@ -174,9 +184,11 @@ async function lookupCache(title: string, category: string) {
     const best = rows.find(
       (r) =>
         (r.is_verified === true || r.primary_source != null) &&
-        r.similarity_score >= CACHE_SIMILARITY_THRESHOLD
+        r.similarity_score >= CACHE_SUGGEST_THRESHOLD
     );
     if (!best) return null;
+    // 확정선 미만은 "제안"이다 — confidence 를 내려 클라이언트가 미리 선택하지 않게 한다.
+    const suggested = best.similarity_score < CACHE_SIMILARITY_THRESHOLD;
     const candidate = {
       title: best.title,
       original_title: best.original_title ?? null,
@@ -184,12 +196,13 @@ async function lookupCache(title: string, category: string) {
       year: best.year ?? null,
       genre: best.genre ?? null,
       metadata: best.metadata ?? {},
-      confidence: "high",
+      confidence: suggested ? "medium" : "high",
     };
     return {
       candidate,
       source_work_id: best.id as string,
       similarity: best.similarity_score as number,
+      suggested,
       // 0 이 아니면 앞선 비신뢰 행에 가려져 있던 히트 — 그림자 발생 빈도 추적용
       rank: rows.indexOf(best),
     };
@@ -544,13 +557,16 @@ Deno.serve(async (req) => {
         const ms = Date.now() - t0;
         console.log("verify-content cache hit:", JSON.stringify({
           title, category, ms, source_work_id: hit.source_work_id, similarity: hit.similarity,
-          rank: hit.rank,
+          rank: hit.rank, suggested: hit.suggested,
         }));
         return new Response(
           JSON.stringify({
             candidates: [hit.candidate],
             _debug: {
               cache_hit: true,
+              // 확정이 아니라 제안임 — 클라이언트가 "이 작품이 맞나요?" 문구를 띄운다.
+              // 이 구간 히트를 사용자가 실제로 골랐는지 로그로 추적해 0.75를 조정한다.
+              suggested: hit.suggested,
               ms,
               source_work_id: hit.source_work_id,
               similarity: hit.similarity,

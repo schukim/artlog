@@ -147,6 +147,7 @@
     "next": "Next",
     "confirm": {
       "title": "Is this the right one?",
+      "similarTitle": "We found a similar title. Is this the one?",
       "research": "Not the work you're looking for? Search again",
       "researchLimit": "You can search again up to 3 times",
       "manualInput": "Can't find it. I'll enter it manually",
