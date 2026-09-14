@@ -216,15 +216,26 @@ export async function fetchUnfinishedInterviews(userId: string): Promise<Unfinis
 
   // review_id 연결이 실패했을 뿐 평론은 이미 있는 경우를 걸러낸다
   // (linkInterviewToReview 는 실패해도 저장을 막지 않는 보조 호출이다).
+  //
+  // 단순히 "이 작품에 평론이 있으면 제외"로 두면 안 된다 — 같은 작품을 다시 감상하고
+  // 새로 인터뷰한 경우까지 묻혀버린다(E2E 에서 실제로 이 상태가 재현됐다).
+  // 그래서 **인터뷰 시작 이후에 생긴** 평론만 "이 인터뷰의 결과물"로 보고 제외한다.
   const { data: existing } = await supabase
     .from("reviews")
-    .select("work_id")
+    .select("work_id, created_at")
     .eq("user_id", userId)
     .in("work_id", candidates.map((r) => r.work_id));
-  const reviewed = new Set((existing ?? []).map((r) => r.work_id));
+  const reviewedAt = new Map<string, string[]>();
+  for (const r of (existing ?? []) as { work_id: string; created_at: string }[]) {
+    const list = reviewedAt.get(r.work_id) ?? [];
+    list.push(r.created_at);
+    reviewedAt.set(r.work_id, list);
+  }
+  const producedReview = (workId: string, interviewCreatedAt: string) =>
+    (reviewedAt.get(workId) ?? []).some((at) => at >= interviewCreatedAt);
 
   return candidates
-    .filter((r) => !reviewed.has(r.work_id))
+    .filter((r) => !producedReview(r.work_id, r.created_at))
     .map((r) => ({
       id: r.id,
       work: r.works as Work,

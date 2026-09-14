@@ -143,27 +143,27 @@ export function MainTabs() {
       <Tab.Screen
         name="HistoryTab"
         component={HistoryScreen}
-        options={{ tabBarLabel: t("tabs.history") }}
+        options={{ tabBarLabel: t("tabs.history"), tabBarButtonTestID: "tab-history" }}
       />
       <Tab.Screen
         name="RecommendTab"
         component={RecommendScreen}
-        options={{ tabBarLabel: t("tabs.recommend") }}
+        options={{ tabBarLabel: t("tabs.recommend"), tabBarButtonTestID: "tab-recommend" }}
       />
       <Tab.Screen
         name="ReviewTab"
         component={ReviewStack}
-        options={{ tabBarLabel: t("tabs.review") }}
+        options={{ tabBarLabel: t("tabs.review"), tabBarButtonTestID: "tab-review" }}
       />
       <Tab.Screen
         name="AnalysisTab"
         component={AnalysisScreen}
-        options={{ tabBarLabel: t("tabs.analysis") }}
+        options={{ tabBarLabel: t("tabs.analysis"), tabBarButtonTestID: "tab-analysis" }}
       />
       <Tab.Screen
         name="MyTab"
         component={MyScreen}
-        options={{ tabBarLabel: t("tabs.my") }}
+        options={{ tabBarLabel: t("tabs.my"), tabBarButtonTestID: "tab-my" }}
       />
     </Tab.Navigator>
     </View>

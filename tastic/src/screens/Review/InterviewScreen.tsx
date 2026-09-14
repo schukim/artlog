@@ -333,6 +333,7 @@ export function InterviewScreen() {
           {awaitingChoice && canPreview && (
             <View className="flex-row mb-3 gap-3">
               <Pressable
+                testID="preview-review-button"
                 className={`flex-1 rounded-xl py-3 items-center ${previewLoading ? "bg-surface-tertiary/50" : "bg-surface-tertiary"}`}
                 onPress={handlePreview}
                 disabled={previewLoading}
@@ -342,6 +343,7 @@ export function InterviewScreen() {
                 </Text>
               </Pressable>
               <Pressable
+                testID="continue-interview-button"
                 className="flex-1 bg-primary rounded-xl py-3 items-center"
                 onPress={continueInterview}
                 disabled={isLoading}
@@ -390,8 +392,17 @@ export function InterviewScreen() {
           message={previewText}
           loading={previewLoading}
           actions={[
-            { label: t("review.interview.finishFromPreview"), onPress: handleFinish, variant: "primary" },
-            { label: t("common.close"), onPress: () => setShowPreview(false) },
+            {
+              label: t("review.interview.finishFromPreview"),
+              onPress: handleFinish,
+              variant: "primary",
+              testID: "preview-finish-button",
+            },
+            {
+              label: t("common.close"),
+              onPress: () => setShowPreview(false),
+              testID: "preview-close-button",
+            },
           ]}
           onClose={() => setShowPreview(false)}
         />

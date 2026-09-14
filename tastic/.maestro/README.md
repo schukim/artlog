@@ -39,7 +39,7 @@ xcrun simctl install booted ios/build-release/Build/Products/Release-iphonesimul
 
 ```bash
 npm run e2e:smoke     # 하네스 점검 (계정 불필요)
-npm run e2e           # 전체
+npm run e2e           # 전체 (서브플로우 제외)
 ```
 
 계정이 필요한 플로우는 환경변수로 주입한다. `.maestro/.env` 는 gitignore 돼 있다.
@@ -70,6 +70,15 @@ maestro test -e E2E_EMAIL="$E2E_EMAIL" -e E2E_PASSWORD="$E2E_PASSWORD" .maestro/
 ```sql
 update users set plan = 'developer' where id = '<계정 uuid>';
 ```
+
+## 실행하며 부딪힌 것들 (기록)
+
+- `hideKeyboard` 는 iOS 에서 실패한다 — 화면의 정적 텍스트(`login-title`, `review-greeting`)를 탭해 닫는다
+- iOS 가장자리 스와이프 백이 이 스택에서 동작하지 않는다 — 이미 선택된 탭을 다시 눌러 스택을 되돌린다
+- 홈은 진입 후 비동기로 내용이 더 붙는다(복구 카드·배너) → 레이아웃이 밀리므로
+  `waitForAnimationToEnd` + `scrollUntilVisible` 로 감싼다
+- `developer` 플랜은 코드상 멤버십이다 — 6문답에서 자동 종료 대신 '미리보기/계속하기' 분기가 뜬다.
+  플로우는 두 경로 모두에서 돌도록 조건부로 처리돼 있다
 
 ## 주의
 

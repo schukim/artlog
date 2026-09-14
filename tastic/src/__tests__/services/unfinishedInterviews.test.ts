@@ -60,11 +60,27 @@ describe("fetchUnfinishedInterviews", () => {
     expect(list[0].conversation).toHaveLength(2);
   });
 
-  it("평론이 이미 있으면 제외한다 — review_id 연결만 실패한 경우", async () => {
+  it("인터뷰 이후에 생긴 평론이면 제외한다 — review_id 연결만 실패한 경우", async () => {
     results.interviews = { data: [interviewRow()], error: null };
-    results.reviews = { data: [{ work_id: "work-1" }], error: null };
+    results.reviews = {
+      data: [{ work_id: "work-1", created_at: "2026-09-01T00:01:00Z" }],
+      error: null,
+    };
 
     expect(await fetchUnfinishedInterviews("user-1")).toHaveLength(0);
+  });
+
+  it("인터뷰 이전에 쓴 평론은 제외 사유가 아니다 — 같은 작품을 다시 감상한 경우", async () => {
+    // 지난달에 같은 작품 평론을 썼고, 오늘 다시 인터뷰하다 평론을 못 남긴 상황.
+    // 예전 평론 때문에 복구 카드가 묻히면 오늘의 인터뷰가 사라진다.
+    results.interviews = { data: [interviewRow()], error: null };
+    results.reviews = {
+      data: [{ work_id: "work-1", created_at: "2026-08-01T00:00:00Z" }],
+      error: null,
+    };
+
+    const list = await fetchUnfinishedInterviews("user-1");
+    expect(list).toHaveLength(1);
   });
 
   it("문답이 비어 있으면 복구할 것이 없으므로 제외한다", async () => {

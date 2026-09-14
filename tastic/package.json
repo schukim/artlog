@@ -14,7 +14,7 @@
     "typecheck": "tsc --noEmit",
     "db:migrate": "npx supabase db push",
     "db:types": "npx supabase gen types typescript --linked > src/types/supabase.ts",
-    "e2e": "maestro test .maestro",
+    "e2e": "maestro test --exclude-tags=subflow .maestro",
     "e2e:smoke": "maestro test .maestro/smoke.yaml"
   },
   "dependencies": {

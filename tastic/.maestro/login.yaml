@@ -6,6 +6,9 @@
 #   set -a; . .maestro/.env; set +a
 #   maestro test -e E2E_EMAIL="$E2E_EMAIL" -e E2E_PASSWORD="$E2E_PASSWORD" .maestro/<flow>.yaml
 appId: com.taewoo.tastic
+# 서브플로우 — 단독 실행 대상이 아니다(npm run e2e 에서 제외된다).
+tags:
+  - subflow
 ---
 # 첫 설치 상태면 인트로 투어를 먼저 넘긴다. 이미 봤다면 이 블록은 건너뛴다.
 - runFlow:

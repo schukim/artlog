@@ -26,10 +26,12 @@ appId: com.taewoo.tastic
       id: "review-body-input"
     timeout: 90000
 
-# 저장하지 않고 화면을 벗어난다(iOS 가장자리 스와이프 = 뒤로가기).
-- swipe:
-    start: "2%, 50%"
-    end: "80%, 50%"
+# 저장하지 않고 화면을 벗어난다.
+# iOS 가장자리 스와이프 백은 이 스택에서 동작하지 않는다(실측) — 이미 선택된 평론 탭을
+# 다시 눌러 스택을 최상단으로 되돌리는 경로를 쓴다. beforeRemove 가 이를 가로채
+# 이탈 확인 다이얼로그를 띄운다.
+- tapOn:
+    id: "tab-review"
 
 # ① 이탈 확인 다이얼로그
 - extendedWaitUntil:

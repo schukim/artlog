@@ -271,8 +271,11 @@ export function ReviewHomeScreen() {
             </View>
           )}
 
-          {/* 마무리하지 못한 평론 — 인터뷰는 끝났는데 평론이 저장되지 않은 건 */}
-          {unfinished.map((item) => (
+          {/* 마무리하지 못한 평론 — 인터뷰는 끝났는데 평론이 저장되지 않은 건.
+              여러 건이어도 한 번에 하나만 보여준다. 전부 펼치면 카드가 쌓여 홈의 주기능
+              (새 평론 시작)이 화면 밖으로 밀려난다 — 복구는 보조 동선이지 주인공이 아니다.
+              하나를 처리하면 다음 건이 그 자리에 올라온다. */}
+          {unfinished.slice(0, 1).map((item) => (
             <View
               key={item.id}
               testID="unfinished-review-card"
@@ -289,6 +292,7 @@ export function ReviewHomeScreen() {
               </Text>
               <Text className="text-text-secondary dark:text-text-dark-secondary text-[13px] mb-3">
                 {t("review.unfinished.description")}
+                {unfinished.length > 1 ? ` (+${unfinished.length - 1})` : ""}
               </Text>
               <View className="flex-row items-center gap-2">
                 <Pressable
