@@ -1,3 +1,5 @@
+// [보류] 이 스펙은 UI 에 연결되기 전에 작성된 것이라 현재 화면 구조·testID 와 맞지 않는다.
+// Detox 1단계에서는 smoke.e2e.ts 만 돌린다. 아래 시나리오는 2단계에서 현재 UI 기준으로 다시 쓴다.
 // E2E 테스트: 인증 플로우
 // 회원가입 → 로그인 → 홈 진입까지 실제 앱 화면을 시뮬레이션합니다.
 // 실행: npx detox test -c ios.sim.debug e2e/auth.e2e.ts
@@ -7,7 +9,7 @@ const TEST_EMAIL = `test_${Date.now()}@tastic.app`;
 const TEST_PASSWORD = "Test1234!";
 const TEST_NICKNAME = "테스트유저";
 
-describe("인증 플로우", () => {
+describe.skip("인증 플로우", () => {
   beforeAll(async () => {
     await device.launchApp({ newInstance: true });
   });

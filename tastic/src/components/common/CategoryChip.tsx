@@ -23,6 +23,7 @@ export function CategoryChip({ category, selected, onPress, fluid }: CategoryChi
 
   return (
     <Pressable
+      testID={`category-chip-${category}`}
       className={`flex-row items-center justify-center py-2 rounded-full ${
         fluid ? "px-2 w-full" : "px-4 mr-2 mb-2"
       } ${selected ? "bg-primary dark:bg-primary-dm" : "bg-surface-tertiary dark:bg-surface-dark-secondary"}`}

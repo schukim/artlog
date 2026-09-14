@@ -1,9 +1,11 @@
+// [보류] 이 스펙은 UI 에 연결되기 전에 작성된 것이라 현재 화면 구조·testID 와 맞지 않는다.
+// Detox 1단계에서는 smoke.e2e.ts 만 돌린다. 아래 시나리오는 2단계에서 현재 UI 기준으로 다시 쓴다.
 // E2E 테스트: 평론 작성 플로우 (핵심 기능)
 // 작품 검색 → 인터뷰 5문답 → 평론 생성 → 히스토리 확인
 // 실행: npx detox test -c ios.sim.debug e2e/review-flow.e2e.ts
 import { device, element, by, expect as detoxExpect, waitFor } from "detox";
 
-describe("평론 작성 플로우", () => {
+describe.skip("평론 작성 플로우", () => {
   beforeAll(async () => {
     await device.launchApp({
       newInstance: true,

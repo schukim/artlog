@@ -104,7 +104,7 @@ export function IntroTourScreen() {
   }, [finish]);
 
   return (
-    <View style={{ flex: 1, backgroundColor: BG, paddingTop: insets.top }}>
+    <View testID="intro-tour-screen" style={{ flex: 1, backgroundColor: BG, paddingTop: insets.top }}>
       {/* 슬라이드 영역 — flex:1 로 하단 컨트롤 바 위 공간만 차지한다.
           컨트롤 바가 이미지를 덮지 않으므로 이미지 아랫부분이 잘리지 않는다. */}
       <ScrollView
@@ -190,6 +190,7 @@ export function IntroTourScreen() {
         )}
 
         <Pressable
+          testID="intro-next-button"
           onPress={handleNext}
           android_ripple={{ color: "rgba(255,255,255,0.15)" }}
           style={{

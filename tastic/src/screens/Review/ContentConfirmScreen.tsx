@@ -198,7 +198,7 @@ export function ContentConfirmScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-surface">
+    <SafeAreaView testID="content-confirm-screen" className="flex-1 bg-surface">
       <ScrollView className="flex-1 px-6 pt-8" contentContainerClassName="pb-8">
         {/* Header */}
         <Text className="text-text text-2xl font-bold mb-2">{t("review.confirm.title")}</Text>

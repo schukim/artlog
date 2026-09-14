@@ -225,7 +225,7 @@ export function InterviewScreen() {
       style={{ flex: 1 }}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
-    <SafeAreaView className="flex-1 bg-surface">
+    <SafeAreaView testID="interview-screen" className="flex-1 bg-surface">
       {/* Header */}
       <View className="px-6 py-3 flex-row items-center justify-between border-b border-surface-tertiary">
         <View className="flex-row items-center flex-1">
@@ -356,6 +356,7 @@ export function InterviewScreen() {
           {!awaitingChoice && !isInterviewComplete && (
             <View className="flex-row items-end">
               <TextInput
+                testID="answer-input"
                 className="flex-1 bg-surface-secondary border border-surface-tertiary rounded-xl px-4 py-3 text-text text-base mr-3 max-h-24"
                 placeholder={t("review.interview.answerPlaceholder")}
                 placeholderTextColor="#94A3B8"
@@ -366,6 +367,7 @@ export function InterviewScreen() {
                 editable={!isLoading && !error}
               />
               <Pressable
+                testID="submit-answer-button"
                 className={`rounded-xl px-5 py-3 ${
                   answerText.trim() && !isLoading ? "bg-primary" : "bg-primary/40"
                 }`}

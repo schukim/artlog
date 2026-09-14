@@ -243,6 +243,7 @@ export function ReviewHomeScreen() {
 
   return (
     <SafeAreaView
+      testID="review-home-screen"
       className={`flex-1 ${isDark ? 'dark' : ''}`}
       style={{ backgroundColor: isDark ? '#1A1814' : '#F8F6F1' }}
     >
@@ -274,6 +275,7 @@ export function ReviewHomeScreen() {
           {unfinished.map((item) => (
             <View
               key={item.id}
+              testID="unfinished-review-card"
               className="bg-surface-secondary dark:bg-surface-dark-secondary border border-primary/30 rounded-2xl p-4 mb-6"
             >
               <Text className="text-text-tertiary dark:text-text-dark-tertiary text-[13px] mb-1">
@@ -290,6 +292,7 @@ export function ReviewHomeScreen() {
               </Text>
               <View className="flex-row items-center gap-2">
                 <Pressable
+                  testID="unfinished-review-continue"
                   className="flex-1 bg-primary dark:bg-primary-dm rounded-xl py-2.5 items-center"
                   onPress={() => handleUnfinishedContinue(item)}
                 >
@@ -312,7 +315,10 @@ export function ReviewHomeScreen() {
 
           {/* 진행 중 인터뷰 배너 */}
           {draft && (
-            <View className="bg-surface-secondary dark:bg-surface-dark-secondary border border-surface-tertiary dark:border-surface-dark-border rounded-2xl p-4 mb-6">
+            <View
+              testID="draft-banner"
+              className="bg-surface-secondary dark:bg-surface-dark-secondary border border-surface-tertiary dark:border-surface-dark-border rounded-2xl p-4 mb-6"
+            >
               <Text className="text-text-tertiary dark:text-text-dark-tertiary text-[13px] mb-1">
                 {t("review.draft.bannerTitle")}
               </Text>
@@ -324,6 +330,7 @@ export function ReviewHomeScreen() {
               </Text>
               <View className="flex-row items-center gap-2">
                 <Pressable
+                  testID="draft-continue-button"
                   className="flex-1 bg-primary dark:bg-primary-dm rounded-xl py-2.5 items-center"
                   onPress={handleDraftContinue}
                 >
@@ -383,6 +390,7 @@ export function ReviewHomeScreen() {
           <Animated.View style={fieldsStyle}>
             <TextInput
               ref={titleRef}
+              testID="review-title-input"
               className="bg-surface-secondary dark:bg-surface-dark-secondary border border-surface-tertiary dark:border-surface-dark-border rounded-xl px-4 py-3.5 text-text dark:text-text-dark text-base mb-3"
               placeholder={t("review.titlePlaceholder")}
               placeholderTextColor={isDark ? '#7A7268' : '#9C9589'}
@@ -424,6 +432,7 @@ export function ReviewHomeScreen() {
             )}
 
             <Pressable
+              testID="review-next-button"
               className={`rounded-xl py-4 items-center ${isValid ? "bg-primary dark:bg-primary-dm" : "bg-primary/40 dark:bg-primary-dm/40"}`}
               onPress={handleNext}
               disabled={!isValid}

@@ -337,7 +337,7 @@ export function ReviewCompleteScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-surface">
+    <SafeAreaView testID="review-complete-screen" className="flex-1 bg-surface">
       <ScrollView className="flex-1 px-6 pt-6" contentContainerClassName="pb-8">
         {/* Header */}
         <View className="flex-row items-center mb-6">
@@ -359,6 +359,7 @@ export function ReviewCompleteScreen() {
 
         {/* Review body */}
         <TextInput
+          testID="review-body-input"
           className="text-text text-base leading-7 min-h-[300px]"
           value={reviewText}
           onChangeText={setReviewText}
@@ -384,6 +385,7 @@ export function ReviewCompleteScreen() {
           </Text>
         </Pressable>
         <Pressable
+          testID="save-review-button"
           className={`flex-1 rounded-xl py-4 items-center ${
             reviewText.trim() && !isSaving ? "bg-primary" : "bg-primary/40"
           }`}
@@ -402,9 +404,23 @@ export function ReviewCompleteScreen() {
         title={t("review.complete.exitConfirmTitle")}
         message={t("review.complete.exitConfirmMessage")}
         actions={[
-          { label: t("review.complete.exitConfirmSave"), onPress: handleExitSave, variant: "primary" },
-          { label: t("review.complete.exitConfirmDiscard"), onPress: handleExitDiscard, variant: "destructive" },
-          { label: t("review.complete.exitConfirmCancel"), onPress: handleExitCancel },
+          {
+            label: t("review.complete.exitConfirmSave"),
+            onPress: handleExitSave,
+            variant: "primary",
+            testID: "exit-save-button",
+          },
+          {
+            label: t("review.complete.exitConfirmDiscard"),
+            onPress: handleExitDiscard,
+            variant: "destructive",
+            testID: "exit-discard-button",
+          },
+          {
+            label: t("review.complete.exitConfirmCancel"),
+            onPress: handleExitCancel,
+            testID: "exit-cancel-button",
+          },
         ]}
         onClose={handleExitCancel}
       />

@@ -9,7 +9,13 @@ interface ConfirmDialogProps {
   title: string;
   message: string;
   loading?: boolean;
-  actions: { label: string; onPress: () => void; variant?: "primary" | "destructive" | "default" }[];
+  // testID: E2E 에서 다이얼로그 버튼을 지목하기 위한 선택 값. 문구가 바뀌어도 셀렉터가 깨지지 않는다.
+  actions: {
+    label: string;
+    onPress: () => void;
+    variant?: "primary" | "destructive" | "default";
+    testID?: string;
+  }[];
   onClose: () => void;
 }
 
@@ -59,6 +65,7 @@ export function ConfirmDialog({ visible, title, message, loading, actions, onClo
                 return (
                   <Pressable
                     key={action.label}
+                    testID={action.testID}
                     className={`${bgClass} py-3 rounded-xl items-center`}
                     onPress={action.onPress}
                   >
