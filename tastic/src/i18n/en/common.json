@@ -186,6 +186,11 @@
       "saveFailed": "Save failed. Please try again",
       "generateFailed": "Couldn't generate the review. Try again?",
       "generating": "Writing your review...",
+      "exitConfirmTitle": "Your review isn't saved",
+      "exitConfirmMessage": "If you leave now, the review you just created won't appear in your history.",
+      "exitConfirmSave": "Save and leave",
+      "exitConfirmDiscard": "Leave without saving",
+      "exitConfirmCancel": "Keep writing",
       "goHome": "Go to Home"
     },
     "draft": {
@@ -196,6 +201,11 @@
       "bannerTitle": "Interview in progress",
       "overwriteTitle": "You have an interview in progress",
       "overwriteMessage": "Starting a new one will discard your '{{title}}' interview."
+    },
+    "unfinished": {
+      "bannerTitle": "Unfinished review",
+      "description": "Your interview is done, but the review was never saved.",
+      "continue": "Finish this review"
     },
     "grace": {
       "bannerTitle": "Your first {{total}} reviews — no daily limit",

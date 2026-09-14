@@ -28,6 +28,11 @@ import { useGuestStore } from "../../stores/guestStore";
 import { GuestSignInDialog } from "../../components/common/GuestSignInDialog";
 import { useTheme } from "../../hooks/useTheme";
 import { loadDraft, clearDraft, type StoredDraft } from "../../utils/storage";
+import {
+  fetchUnfinishedInterviews,
+  abandonInterview,
+  type UnfinishedInterview,
+} from "../../services/review";
 import { toISODateString } from "../../utils/formatDate";
 import { checkUsageLimit, getRemainingGrace, FREE_GRACE } from "../../services/usage";
 
@@ -60,6 +65,9 @@ export function ReviewHomeScreen() {
   const [showOverwriteDialog, setShowOverwriteDialog] = useState(false);
   // 온보딩 그레이스(첫 3편 일일 한도 면제) 잔여 편수 — 0이면 배너 미노출
   const [graceLeft, setGraceLeft] = useState(0);
+  // 인터뷰는 끝냈는데 평론이 남지 않은 건 — 서버 기준 복구 진입점.
+  // 로컬 드래프트 복구는 같은 기기·7일 한정이라, 기기를 바꿨거나 오래된 건은 여기로만 닿는다.
+  const [unfinished, setUnfinished] = useState<UnfinishedInterview[]>([]);
 
   const titleRef = useRef<TextInput>(null);
 
@@ -144,6 +152,8 @@ export function ReviewHomeScreen() {
     useCallback(() => {
       if (user) {
         loadDraft(user.id).then(setDraft);
+        // 평론 없이 끝난 인터뷰 — 실패해도 홈 화면을 막지 않는다
+        fetchUnfinishedInterviews(user.id).then(setUnfinished).catch(() => setUnfinished([]));
         // 온보딩 그레이스 잔여분 — 남아 있을 때만 배너로 노출한다.
         // 분석·추천이 3편에서 열린다는 사실을 첫 화면에서 알리는 것이 목적이라,
         // 소진(0) 이후에는 조용히 사라진다.
@@ -151,6 +161,7 @@ export function ReviewHomeScreen() {
       } else {
         setDraft(null);
         setGraceLeft(0);
+        setUnfinished([]);
       }
     }, [user])
   );
@@ -164,6 +175,22 @@ export function ReviewHomeScreen() {
   const handleDraftDiscard = async () => {
     await clearDraft();
     setDraft(null);
+  };
+
+  // 평론 생성 화면으로 곧장 보낸다 — 문답은 이미 다 있으므로 인터뷰를 다시 할 필요가 없다.
+  // 재생성 비용은 interview_id 로 중복 차감되지 않는다(서버 consume_usage 의 ref_id).
+  const handleUnfinishedContinue = (item: UnfinishedInterview) => {
+    navigation.navigate("ReviewComplete", {
+      content: item.work,
+      conversation: item.conversation,
+      interviewId: item.id,
+    });
+  };
+
+  // 문답 자체는 지우지 않고 노출만 멈춘다(status='abandoned').
+  const handleUnfinishedDismiss = async (item: UnfinishedInterview) => {
+    setUnfinished((prev) => prev.filter((u) => u.id !== item.id));
+    await abandonInterview(item.id).catch(() => {});
   };
 
   const isValid = title.trim().length > 0 && category !== null;
@@ -242,6 +269,46 @@ export function ReviewHomeScreen() {
               </Text>
             </View>
           )}
+
+          {/* 마무리하지 못한 평론 — 인터뷰는 끝났는데 평론이 저장되지 않은 건 */}
+          {unfinished.map((item) => (
+            <View
+              key={item.id}
+              className="bg-surface-secondary dark:bg-surface-dark-secondary border border-primary/30 rounded-2xl p-4 mb-6"
+            >
+              <Text className="text-text-tertiary dark:text-text-dark-tertiary text-[13px] mb-1">
+                {t("review.unfinished.bannerTitle")}
+              </Text>
+              <Text
+                className="text-text dark:text-text-dark text-base font-semibold mb-1"
+                numberOfLines={1}
+              >
+                {CATEGORY_ICONS[item.work.category]} {item.work.title}
+              </Text>
+              <Text className="text-text-secondary dark:text-text-dark-secondary text-[13px] mb-3">
+                {t("review.unfinished.description")}
+              </Text>
+              <View className="flex-row items-center gap-2">
+                <Pressable
+                  className="flex-1 bg-primary dark:bg-primary-dm rounded-xl py-2.5 items-center"
+                  onPress={() => handleUnfinishedContinue(item)}
+                >
+                  <Text className="text-white font-medium text-[15px]">
+                    {t("review.unfinished.continue")}
+                  </Text>
+                </Pressable>
+                <Pressable
+                  className="px-4 py-2.5"
+                  onPress={() => handleUnfinishedDismiss(item)}
+                  hitSlop={4}
+                >
+                  <Text className="text-text-secondary dark:text-text-dark-secondary text-[15px]">
+                    {t("common.delete")}
+                  </Text>
+                </Pressable>
+              </View>
+            </View>
+          ))}
 
           {/* 진행 중 인터뷰 배너 */}
           {draft && (

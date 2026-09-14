@@ -1,4 +1,4 @@
-import type { Review, Interview, ConversationEntry } from "../types/database";
+import type { Review, Interview, ConversationEntry, Work } from "../types/database";
 import type { Json } from "../types/supabase";
 import { supabase } from "./supabase";
 import { getUnsavedReviews, removeUnsavedReview } from "../utils/storage";
@@ -174,6 +174,76 @@ export async function createInterview(params: CreateInterviewParams): Promise<In
   }
 
   return data as unknown as Interview;
+}
+
+// 인터뷰는 끝냈는데 평론이 남지 않은 건 — 홈에서 복구 진입점으로 노출한다.
+//
+// 왜 필요한가: 평론은 ReviewCompleteScreen 에서 생성되고 '저장하기'를 눌러야 서버에 남는다.
+// 생성이 실패하거나 저장 전에 이탈하면 문답은 이 테이블에 남지만 그것을 여는 화면이 없어,
+// 10~20분짜리 인터뷰가 사용자에게서 사라진 것과 같았다(실측 4건).
+// 로컬 드래프트로도 복구되지만 그건 같은 기기·7일 한정이라, 서버 기준 경로를 따로 둔다.
+export interface UnfinishedInterview {
+  id: string;
+  work: Work;
+  conversation: ConversationEntry[];
+  createdAt: string;
+}
+
+export async function fetchUnfinishedInterviews(userId: string): Promise<UnfinishedInterview[]> {
+  const { data, error } = await supabase
+    .from("interviews")
+    .select("id, work_id, conversation, created_at, works(*)")
+    .eq("user_id", userId)
+    .eq("status", "completed")
+    .is("review_id", null)
+    .order("created_at", { ascending: false })
+    .limit(5);
+
+  if (error) {
+    console.error("fetchUnfinishedInterviews error:", error);
+    return [];
+  }
+
+  const rows = (data ?? []) as unknown as {
+    id: string;
+    work_id: string;
+    conversation: ConversationEntry[] | null;
+    created_at: string;
+    works: Work | null;
+  }[];
+  const candidates = rows.filter((r) => r.works && (r.conversation?.length ?? 0) > 0);
+  if (candidates.length === 0) return [];
+
+  // review_id 연결이 실패했을 뿐 평론은 이미 있는 경우를 걸러낸다
+  // (linkInterviewToReview 는 실패해도 저장을 막지 않는 보조 호출이다).
+  const { data: existing } = await supabase
+    .from("reviews")
+    .select("work_id")
+    .eq("user_id", userId)
+    .in("work_id", candidates.map((r) => r.work_id));
+  const reviewed = new Set((existing ?? []).map((r) => r.work_id));
+
+  return candidates
+    .filter((r) => !reviewed.has(r.work_id))
+    .map((r) => ({
+      id: r.id,
+      work: r.works as Work,
+      conversation: r.conversation ?? [],
+      createdAt: r.created_at,
+    }));
+}
+
+// 복구 카드에서 '지우기' — 평론 없이 끝난 인터뷰를 더 이상 노출하지 않는다.
+// 문답 자체는 남겨둔다(되돌릴 수 없는 삭제를 카드 한 번 눌러 일으키지 않는다).
+export async function abandonInterview(interviewId: string): Promise<void> {
+  const { error } = await supabase
+    .from("interviews")
+    .update({ status: "abandoned" })
+    .eq("id", interviewId);
+  if (error) {
+    console.error("abandonInterview error:", error);
+    throw new Error(`인터뷰 정리에 실패했습니다: ${error.message}`);
+  }
 }
 
 export async function updateInterview(
