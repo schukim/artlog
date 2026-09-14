@@ -2,6 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { enforceRateLimit } from "../_shared/usage.ts";
 import { consumeGuestUsage, guestIdFrom } from "../_shared/guest.ts";
+import { sameSeriesEntry } from "../_shared/seriesKey.ts";
 import {
   buildSourceList,
   CORS,
@@ -184,7 +185,11 @@ async function lookupCache(title: string, category: string) {
     const best = rows.find(
       (r) =>
         (r.is_verified === true || r.primary_source != null) &&
-        r.similarity_score >= CACHE_SUGGEST_THRESHOLD
+        r.similarity_score >= CACHE_SUGGEST_THRESHOLD &&
+        // 속편/시즌 방어: 1편과 속편은 제목이 거의 같아 유사도가 확정선을 넘는다
+        // (실측 '악마는 프라다를 입는다' ↔ '…2' = 0.87). 번호가 다르면 다른 작품이므로
+        // 캐시로 인정하지 않고 웹서치로 보낸다 — 아는 게 틀렸는데 제안하는 것보다 낫다.
+        sameSeriesEntry(title, r.title, r.original_title)
     );
     if (!best) return null;
     // 확정선 미만은 "제안"이다 — confidence 를 내려 클라이언트가 미리 선택하지 않게 한다.

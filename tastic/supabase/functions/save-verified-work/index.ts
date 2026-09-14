@@ -2,6 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { callJsonLLM } from "../_shared/llm.ts";
 import { enforceRateLimit } from "../_shared/usage.ts";
+import { sameSeriesEntry } from "../_shared/seriesKey.ts";
 
 // 유저별 작품 확정 일일 상한(비용 남용 방어). 요청마다 LLM(첫 질문 생성)을 부를 수 있어
 // verify-content 와 동일한 abuse ceiling 을 둔다. 정상 사용자는 하루 수 건.
@@ -149,7 +150,11 @@ Deno.serve(async (req) => {
     });
     if (searchError) console.error("save-verified-work search error:", searchError);
 
-    const best = matches?.[0];
+    // 속편/시즌 방어: 1편과 속편은 제목이 거의 같아 유사도가 재사용선을 넘는다
+    // (실측 '악마는 프라다를 입는다' ↔ '…2' = 0.87). 이 경로는 매칭된 행의
+    // creator/year/genre/metadata 를 **덮어쓰므로**, 잘못 붙으면 전역 캐시가 오염된다.
+    // 번호가 다르면 다른 작품이니 재사용하지 않고 새 행을 만든다.
+    const best = matches?.find((m) => sameSeriesEntry(title, m.title, m.original_title));
     if (best && best.similarity_score >= REUSE_SIMILARITY_THRESHOLD) {
       // 2. 재사용 + 검증 승격. 미검증 행이면 메타데이터를 우리 값으로 보강.
       const patch: Record<string, unknown> = {
