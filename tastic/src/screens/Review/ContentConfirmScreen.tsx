@@ -170,6 +170,8 @@ export function ContentConfirmScreen() {
         // 후보를 확정하면 is_verified=true로 승격해 전역 캐시로 공유 (service-role 엣지 함수)
         contentData = await saveVerifiedWork({
           title: candidate.title,
+          // 사용자가 친 원문 — 확정 제목과 다르면 별칭으로 남는다
+          queryTitle: title,
           originalTitle: candidate.original_title ?? undefined,
           category,
           creator: candidate.creator ?? undefined,

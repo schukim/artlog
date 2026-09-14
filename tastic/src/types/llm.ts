@@ -30,6 +30,10 @@ export interface VerifyContentDebug {
   cache_hit?: boolean;
   // 확정이 아니라 제안(유사도 0.75~0.85)인 캐시 히트. 화면에 "이 작품이 맞나요?"를 띄운다.
   suggested?: boolean;
+  // 별칭(사람이 확정해 만든 "이 문자열 = 이 작품" 연결)으로 잡힌 히트
+  alias_hit?: boolean;
+  // 질의 메모 캐시로 잡힌 히트
+  memo_hit?: boolean;
   source_work_id?: string;
   similarity?: number;
   ms: number;

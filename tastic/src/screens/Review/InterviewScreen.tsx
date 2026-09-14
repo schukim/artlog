@@ -180,14 +180,24 @@ export function InterviewScreen() {
     });
   };
 
-  // 확인 후 실제 이탈 — beforeRemove 가 막아둔 액션이 있으면 그대로 재실행
+  // 확인 후 실제 이탈.
+  //
+  // 닫기(✕)·뒤로가기로 나가는 경우엔 홈까지 보낸다. 한 단계만 pop 하면 방금 지나온
+  // '작품 확인' 화면에 서게 되는데, 나가겠다고 누른 사용자를 중간 화면에 세워두는 꼴이다
+  // (그 화면의 '다음'은 같은 작품으로 인터뷰를 다시 시작한다).
+  // 탭 전환처럼 사용자가 목적지를 지정한 액션은 그대로 존중한다.
   const leaveScreen = () => {
     allowLeaveRef.current = true;
     setShowExitDialog(false);
     const action = pendingActionRef.current;
     pendingActionRef.current = null;
-    if (action) navigation.dispatch(action);
-    else navigation.goBack();
+    // dispatch 는 액션 객체 또는 리듀서 함수를 받는다 — 객체일 때만 type 을 본다.
+    const isGoBack = typeof action === "object" && action !== null && action.type === "GO_BACK";
+    if (!action || isGoBack) {
+      navigation.popToTop();
+      return;
+    }
+    navigation.dispatch(action);
   };
 
   const handleExitSave = async () => {

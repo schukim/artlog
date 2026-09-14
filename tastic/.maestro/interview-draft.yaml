@@ -22,18 +22,7 @@ appId: com.taewoo.tastic
 - tapOn:
     id: "interview-exit-save"
 
-# 인터뷰를 나가면 홈이 아니라 '작품 확인' 화면으로 돌아온다 —
-# 스택이 홈 → 작품확인 → 인터뷰라 goBack 이 한 단계만 pop 하기 때문이다.
-# (UX 관점에서는 '저장하고 나가기'가 홈까지 가는 게 맞아 보이지만, 지금 동작은 이렇다.)
-- extendedWaitUntil:
-    visible:
-      id: "content-confirm-screen"
-    timeout: 20000
-
-# 홈까지 한 번 더 뒤로. iOS 가장자리 스와이프는 이 스택에서 먹지 않아(실측),
-# 이미 선택된 평론 탭을 다시 눌러 스택을 최상단으로 되돌린다.
-- tapOn:
-    id: "tab-review"
+# 닫기로 나가면 홈까지 돌아온다 — 중간의 '작품 확인' 화면에 서지 않는다.
 
 # 홈에 '진행 중인 인터뷰' 배너
 - extendedWaitUntil:

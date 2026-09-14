@@ -147,6 +147,43 @@ async function memoPut(
   }
 }
 
+// ── 별칭 조회 ──
+// 사용자가 예전에 이 문자열을 치고 어떤 작품을 확정했다면, 그 연결을 그대로 쓴다.
+// 메모 캐시와 달리 TTL 이 없고 전 사용자가 공유한다 — 사람이 한 번 검증한 정보이기 때문이다.
+// 매칭은 정규화 완전일치. 유사도를 쓰지 않으므로 속편/오타 구분 문제가 따라오지 않는다.
+async function aliasLookup(title: string, category: string) {
+  try {
+    if (!SUPABASE_URL || !SERVICE_ROLE_KEY) return null;
+    const { data, error } = await withTimeout(
+      supabase().rpc("lookup_work_alias", { p_query: title, p_category: category }),
+      MEMO_TIMEOUT_MS,
+      { data: null, error: { message: "alias lookup timeout" } },
+    );
+    if (error) {
+      console.error("aliasLookup error:", error);
+      return null;
+    }
+    // deno-lint-ignore no-explicit-any
+    const row = Array.isArray(data) ? (data[0] as any) : null;
+    if (!row) return null;
+    return {
+      candidate: {
+        title: row.title,
+        original_title: row.original_title ?? null,
+        creator: row.creator ?? null,
+        year: row.year ?? null,
+        genre: row.genre ?? null,
+        metadata: row.metadata ?? {},
+        confidence: "high",
+      },
+      source_work_id: row.id as string,
+    };
+  } catch (e) {
+    console.error("aliasLookup failed — 다음 캐시로 폴백:", e);
+    return null;
+  }
+}
+
 // search_works RPC로 카탈로그를 훑어, 신뢰할 수 있는 캐시 작품이 있으면 candidate로 합성해 반환.
 // 없으면 null → 호출부에서 웹서치로 폴백.
 async function lookupCache(title: string, category: string) {
@@ -556,7 +593,31 @@ Deno.serve(async (req) => {
         );
       }
 
-      // 0-b. works 카탈로그 캐시 (기존 경로)
+      // 0-b. 별칭 — 사람이 한 번 확정해 만든 "이 문자열 = 이 작품" 연결.
+      // 메모(0-a)가 만료돼도 남고, 처음 치는 사용자도 여기서 잡힌다.
+      const alias = await aliasLookup(title, category);
+      if (alias) {
+        const ms = Date.now() - t0;
+        console.log("verify-content alias hit:", JSON.stringify({
+          title, category, ms, source_work_id: alias.source_work_id,
+        }));
+        return new Response(
+          JSON.stringify({
+            candidates: [alias.candidate],
+            _debug: {
+              cache_hit: true,
+              alias_hit: true,
+              ms,
+              source_work_id: alias.source_work_id,
+              search_count: 0,
+              cited_domains: [],
+            },
+          }),
+          { headers: { ...CORS, "Content-Type": "application/json" } }
+        );
+      }
+
+      // 0-c. works 카탈로그 캐시 (기존 경로)
       const hit = await lookupCache(title, category);
       if (hit) {
         const ms = Date.now() - t0;

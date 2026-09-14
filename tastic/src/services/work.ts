@@ -61,6 +61,9 @@ export async function saveVerifiedWork(
   contentInfo: {
     title: string;
     category: ContentCategory;
+    // 사용자가 검색창에 실제로 친 문자열. 확정 제목과 다르면 서버가 별칭으로 남겨
+    // 다음부터 같은 오타·표기로도 웹서치 없이 이 작품에 닿게 한다.
+    queryTitle?: string;
     originalTitle?: string;
     creator?: string;
     year?: number;
@@ -72,6 +75,7 @@ export async function saveVerifiedWork(
     body: {
       title: contentInfo.title,
       category: contentInfo.category,
+      queryTitle: contentInfo.queryTitle ?? null,
       originalTitle: contentInfo.originalTitle ?? null,
       creator: contentInfo.creator ?? null,
       year: contentInfo.year ?? null,

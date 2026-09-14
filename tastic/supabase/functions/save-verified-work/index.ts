@@ -31,6 +31,9 @@ const CORS = {
 interface SaveWorkBody {
   title: string;
   category: string;
+  // 사용자가 검색창에 실제로 친 문자열. 확정된 제목과 다르면 별칭으로 남겨
+  // 다음부터는 웹서치 없이 이 작품에 닿게 한다(오타·다른 표기 흡수).
+  queryTitle?: string | null;
   originalTitle?: string | null;
   creator?: string | null;
   year?: number | null;
@@ -102,6 +105,24 @@ ${metaLines}`;
   } catch (e) {
     console.error("generateFirstQuestions failed — 템플릿 폴백:", e);
     return null;
+  }
+}
+
+// 사용자가 친 문자열을 이 작품의 별칭으로 남긴다.
+// 확정 제목·원제와 같은 문자열은 DB 함수가 알아서 무시한다(별칭이 아니다).
+// 실패해도 저장을 막지 않는다 — 별칭은 있으면 좋은 보조 정보다.
+// deno-lint-ignore no-explicit-any
+async function recordAlias(sb: any, workId: string, queryTitle: unknown, category: string) {
+  if (typeof queryTitle !== "string" || queryTitle.trim() === "") return;
+  try {
+    const { error } = await sb.rpc("record_work_alias", {
+      p_work_id: workId,
+      p_query: queryTitle,
+      p_category: category,
+    });
+    if (error) console.error("recordAlias error:", error);
+  } catch (e) {
+    console.error("recordAlias failed:", e);
   }
 }
 
@@ -193,6 +214,7 @@ Deno.serve(async (req) => {
         console.error("save-verified-work promote error:", updErr);
         throw new Error(updErr.message);
       }
+      await recordAlias(sb, best.id as string, body.queryTitle, category);
       return new Response(JSON.stringify({ work: updated, reused: true }), {
         headers: { ...CORS, "Content-Type": "application/json" },
       });
@@ -233,6 +255,7 @@ Deno.serve(async (req) => {
       console.error("save-verified-work insert error:", insErr);
       throw new Error(insErr.message);
     }
+    await recordAlias(sb, created.id as string, body.queryTitle, category);
     return new Response(JSON.stringify({ work: created, reused: false }), {
       headers: { ...CORS, "Content-Type": "application/json" },
     });
