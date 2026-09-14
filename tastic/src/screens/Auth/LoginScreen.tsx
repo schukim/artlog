@@ -148,6 +148,7 @@ export function LoginScreen() {
           {/* Email */}
           <View className="mb-4">
             <TextInput
+              testID="login-email-input"
               className="bg-surface-secondary border border-surface-tertiary rounded-xl px-4 py-3.5 text-text text-base"
               placeholder={t("auth.email")}
               placeholderTextColor="#9C9589"
@@ -163,6 +164,7 @@ export function LoginScreen() {
           <View className="mb-2">
             <View className="relative">
               <TextInput
+                testID="login-password-input"
                 className="bg-surface-secondary border border-surface-tertiary rounded-xl px-4 py-3.5 text-text text-base pr-16"
                 placeholder={t("auth.password")}
                 placeholderTextColor="#9C9589"
@@ -204,6 +206,7 @@ export function LoginScreen() {
 
           {/* Login Button */}
           <Pressable
+            testID="login-submit-button"
             className={`rounded-xl py-4 items-center mb-4 ${
               isValid && !loading ? "bg-primary" : "bg-primary/40"
             }`}

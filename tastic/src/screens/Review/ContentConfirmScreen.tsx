@@ -237,6 +237,7 @@ export function ContentConfirmScreen() {
         {!isLoading && candidates.map((candidate, index) => (
           <Pressable
             key={index}
+            testID={`content-candidate-${index}`}
             className={`border rounded-2xl p-4 mb-3 ${
               selectedIndex === index && !isManualMode
                 ? "border-primary bg-primary/5"
@@ -342,6 +343,7 @@ export function ContentConfirmScreen() {
           <Text className="text-red-500 text-[15px] text-center mb-3">{saveError}</Text>
         )}
         <Pressable
+          testID="confirm-next-button"
           className={`rounded-xl py-4 items-center ${isValid && !isSaving ? "bg-primary" : "bg-primary/40"}`}
           onPress={handleNext}
           disabled={!isValid || isSaving}

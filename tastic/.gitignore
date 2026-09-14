@@ -43,3 +43,6 @@ coverage/
 # generated native folders
 /ios
 /android
+
+# Maestro E2E 계정 정보(로컬 전용)
+.maestro/.env

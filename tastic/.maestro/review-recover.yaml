@@ -1,0 +1,72 @@
+# 플로우 2 — 오늘 고친 지점: 평론을 만들고 저장하지 않은 채 나갔을 때.
+#
+# 검증하는 것 둘:
+#   ① 이탈 확인 다이얼로그가 뜬다 (저장 안 된 평론을 들고 나가려 할 때)
+#   ② 홈의 '마무리하지 못한 평론' 카드로 되돌아와 저장할 수 있다
+#
+# 이 경로가 깨지면 사용자는 10~20분짜리 인터뷰 결과를 통째로 잃는다.
+# 실제로 그렇게 잃은 사용자가 3명 있었다(2026-09 조사).
+appId: com.taewoo.tastic
+---
+- launchApp:
+    clearState: true
+- runFlow: login.yaml
+- runFlow:
+    file: interview.yaml
+    env:
+      TITLE: "기생충"
+      ANSWERS_COUNT: 6
+
+- extendedWaitUntil:
+    visible:
+      id: "review-complete-screen"
+    timeout: 60000
+- extendedWaitUntil:
+    visible:
+      id: "review-body-input"
+    timeout: 90000
+
+# 저장하지 않고 화면을 벗어난다(iOS 가장자리 스와이프 = 뒤로가기).
+- swipe:
+    start: "2%, 50%"
+    end: "80%, 50%"
+
+# ① 이탈 확인 다이얼로그
+- extendedWaitUntil:
+    visible:
+      id: "exit-discard-button"
+    timeout: 15000
+- tapOn:
+    id: "exit-discard-button"
+
+# ② 홈에 복구 카드가 뜬다 — 인터뷰는 완료됐는데 평론이 없는 상태이므로
+- extendedWaitUntil:
+    visible:
+      id: "review-home-screen"
+    timeout: 30000
+- extendedWaitUntil:
+    visible:
+      id: "unfinished-review-card"
+    timeout: 30000
+
+- tapOn:
+    id: "unfinished-review-continue"
+
+# 인터뷰를 다시 하지 않고 평론 생성 화면으로 바로 가야 한다.
+- extendedWaitUntil:
+    visible:
+      id: "review-complete-screen"
+    timeout: 30000
+- extendedWaitUntil:
+    visible:
+      id: "review-body-input"
+    timeout: 90000
+- tapOn:
+    id: "save-review-button"
+
+- extendedWaitUntil:
+    visible:
+      id: "review-home-screen"
+    timeout: 30000
+- assertNotVisible:
+    id: "unfinished-review-card"

@@ -14,9 +14,8 @@
     "typecheck": "tsc --noEmit",
     "db:migrate": "npx supabase db push",
     "db:types": "npx supabase gen types typescript --linked > src/types/supabase.ts",
-    "e2e:build": "detox build -c ios.sim.release",
-    "e2e": "detox test -c ios.sim.release",
-    "e2e:build:debug": "detox build -c ios.sim.debug"
+    "e2e": "maestro test .maestro",
+    "e2e:smoke": "maestro test .maestro/smoke.yaml"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",
@@ -56,15 +55,11 @@
     "zustand": "^5.0.12"
   },
   "devDependencies": {
-    "@types/jest": "^30.0.0",
     "@types/react": "~19.1.0",
     "@vitest/coverage-v8": "^2.1.9",
     "babel-preset-expo": "~54.0.10",
-    "detox": "^20.51.4",
     "eslint": "^9.39.4",
     "eslint-config-expo": "^57.0.0",
-    "jest": "^29.7.0",
-    "ts-jest": "^29.4.12",
     "typescript": "~5.9.2",
     "vitest": "^2.1.9"
   },

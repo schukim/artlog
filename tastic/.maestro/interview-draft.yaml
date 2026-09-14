@@ -1,0 +1,43 @@
+# 플로우 3 — 인터뷰 도중 이탈했다가 이어서 쓰기.
+# 오늘 clearDraft 시점을 옮겼기 때문에(인터뷰 완료 → 평론 저장 성공),
+# 이 경로가 의도대로 남아 있는지 확인한다.
+appId: com.taewoo.tastic
+---
+- launchApp:
+    clearState: true
+- runFlow: login.yaml
+- runFlow:
+    file: interview.yaml
+    env:
+      TITLE: "기생충"
+      ANSWERS_COUNT: 2
+
+# 답변 2개만 하고 닫기 → 이탈 확인 다이얼로그
+- tapOn:
+    id: "interview-close-button"
+- extendedWaitUntil:
+    visible:
+      id: "interview-exit-save"
+    timeout: 15000
+- tapOn:
+    id: "interview-exit-save"
+
+# 홈에 '진행 중인 인터뷰' 배너
+- extendedWaitUntil:
+    visible:
+      id: "review-home-screen"
+    timeout: 30000
+- assertVisible:
+    id: "draft-banner"
+
+# 이어서 하기 → 인터뷰가 복원된다(답변이 남아 있어 처음부터 다시 하지 않는다)
+- tapOn:
+    id: "draft-continue-button"
+- extendedWaitUntil:
+    visible:
+      id: "interview-screen"
+    timeout: 30000
+- extendedWaitUntil:
+    visible:
+      id: "answer-input"
+    timeout: 45000

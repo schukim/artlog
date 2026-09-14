@@ -239,6 +239,7 @@ export function InterviewScreen() {
         </Text>
         {/* 닫기 — 답변이 있으면 beforeRemove 가 이탈 확인 다이얼로그로 가로챈다 */}
         <Pressable
+          testID="interview-close-button"
           className="ml-4"
           hitSlop={8}
           onPress={() => navigation.goBack()}
@@ -402,9 +403,23 @@ export function InterviewScreen() {
         title={t("review.interview.exitConfirmTitle")}
         message={t("review.interview.exitConfirmMessage")}
         actions={[
-          { label: t("review.interview.exitConfirmSave"), onPress: handleExitSave, variant: "primary" },
-          { label: t("review.interview.exitConfirmDiscard"), onPress: handleExitDiscard, variant: "destructive" },
-          { label: t("review.interview.exitConfirmCancel"), onPress: handleExitCancel },
+          {
+            label: t("review.interview.exitConfirmSave"),
+            onPress: handleExitSave,
+            variant: "primary",
+            testID: "interview-exit-save",
+          },
+          {
+            label: t("review.interview.exitConfirmDiscard"),
+            onPress: handleExitDiscard,
+            variant: "destructive",
+            testID: "interview-exit-discard",
+          },
+          {
+            label: t("review.interview.exitConfirmCancel"),
+            onPress: handleExitCancel,
+            testID: "interview-exit-cancel",
+          },
         ]}
         onClose={handleExitCancel}
       />

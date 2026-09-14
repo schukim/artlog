@@ -1,0 +1,25 @@
+# 하네스 검증 플로우.
+# 앱이 뜨고, 요소를 찾고, 탭이 실제로 먹히는지까지 본다 —
+# 플로우 스펙이 실패했을 때 "앱 문제인지 하네스 문제인지"를 가르는 기준점이다.
+#
+# 왜 Maestro 인가: 이 앱은 New Architecture(Fabric)로 돈다. Detox 는 그 환경에서
+# 가시성 판정이 깨져 탭이 아예 되지 않았다(요소 조회는 됐다). Maestro 는 접근성
+# 계층으로 구동해 Fabric 에서 정상 동작한다. testID 는 그대로 재사용된다.
+appId: com.taewoo.tastic
+---
+- launchApp:
+    clearState: true
+
+# 첫 설치 상태에서는 인트로 투어 3장이 먼저 뜬다(건너뛰기 버튼은 의도적으로 없다).
+- assertVisible:
+    id: "intro-tour-screen"
+
+- repeat:
+    times: 3
+    commands:
+      - tapOn:
+          id: "intro-next-button"
+
+# 투어를 마치면 로그인 화면에 닿는다 — 탭이 실제로 먹혔다는 증거다.
+- assertVisible:
+    id: "login-screen"

@@ -1,0 +1,60 @@
+# 인터뷰 서브플로우 — 작품 검색부터 평론 생성 화면 진입까지.
+# 세 본 플로우가 공통으로 여기를 지난다.
+#
+# 파라미터: TITLE(작품 제목), ANSWERS_COUNT(답변 횟수, 기본 6 = 무료 플랜 상한)
+#
+# 주의: 이 구간은 실제 LLM 을 호출한다(작품 검색 1회 + 질문 5회 + 평론 1회).
+# 캐시에 있는 작품을 쓰면 검색 비용은 0 이 된다 — TITLE 기본값이 그래서 기존 작품이다.
+appId: com.taewoo.tastic
+---
+- assertVisible:
+    id: "review-home-screen"
+
+- tapOn:
+    id: "review-title-input"
+- inputText: ${TITLE}
+- hideKeyboard
+
+- tapOn:
+    id: "category-chip-movie"
+
+- tapOn:
+    id: "review-next-button"
+
+# 작품 확인 — 웹서치 또는 캐시 조회. 웹서치면 최대 30초 걸린다.
+- extendedWaitUntil:
+    visible:
+      id: "content-confirm-screen"
+    timeout: 15000
+- extendedWaitUntil:
+    visible:
+      id: "content-candidate-0"
+    timeout: 45000
+- tapOn:
+    id: "content-candidate-0"
+- tapOn:
+    id: "confirm-next-button"
+
+# 인터뷰 — 첫 질문이 뜰 때까지 기다린 뒤 정해진 횟수만큼 답한다.
+- extendedWaitUntil:
+    visible:
+      id: "interview-screen"
+    timeout: 30000
+- extendedWaitUntil:
+    visible:
+      id: "answer-input"
+    timeout: 45000
+
+- repeat:
+    times: ${ANSWERS_COUNT}
+    commands:
+      - extendedWaitUntil:
+          visible:
+            id: "answer-input"
+          timeout: 45000
+      - tapOn:
+          id: "answer-input"
+      - inputText: "E2E 자동 답변입니다. 공간의 대비가 인상 깊었고, 인물의 선택이 이해되면서도 불편했습니다."
+      - hideKeyboard
+      - tapOn:
+          id: "submit-answer-button"
