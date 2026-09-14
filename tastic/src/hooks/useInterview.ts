@@ -3,9 +3,8 @@ import type { Content, ConversationEntry } from "../types/database";
 import type { GenerateQuestionResponse } from "../types/llm";
 import { generateQuestion } from "../services/claude";
 import { createInterview, updateInterview } from "../services/review";
-import { saveDraft, clearDraft } from "../utils/storage";
+import { saveDraft } from "../utils/storage";
 import { useAuthStore } from "../stores/authStore";
-import { useGuestStore } from "../stores/guestStore";
 import { getFirstQuestion } from "../prompts/firstQuestions";
 import { resolveLlmLanguage } from "../utils/llmLanguage";
 
@@ -20,10 +19,9 @@ export const FREE_MAX_QUESTIONS = 6;
 const MEMBERSHIP_MAX_QUESTIONS = 10;
 
 export function useInterview(content: Content) {
+  // 게스트(비로그인 체험)는 user 가 없다 — 인터뷰 행·드래프트를 만드는 지점은 모두
+  // !user 로 막혀 있다. 체험 중에는 어떤 유저 데이터도 만들지 않는 것이 원칙이다.
   const user = useAuthStore((s) => s.user);
-  // 게스트(비로그인 체험)는 서버에 인터뷰/드래프트를 남기지 않는다 — 계정이 없어
-  // user_id 를 붙일 수 없고, 체험 중에는 어떤 유저 데이터도 만들지 않는 것이 원칙이다.
-  const isGuest = useGuestStore((s) => s.isGuest);
   // developer는 내부용 플랜 — 기능상 멤버십과 동일하게 동작 (UI 비노출)
   const isMembership = user?.plan === "membership" || user?.plan === "developer";
   const [conversation, setConversation] = useState<ConversationEntry[]>([]);
@@ -181,15 +179,18 @@ export function useInterview(content: Content) {
   }, [user, content, conversation, questionCount]);
 
   // 인터뷰 종료 처리 — 평론 생성은 ReviewCompleteScreen에서 수행
+  //
+  // 드래프트는 여기서 지우지 않는다. 예전엔 인터뷰를 마치는 순간 지웠는데, 평론 생성은
+  // 그다음 화면에서 일어나므로 생성이 실패하면 사용자가 돌아갈 곳이 사라졌다 —
+  // 문답은 서버 interviews 행에 남지만 그것을 다시 열어주는 화면이 없어서, 20분짜리
+  // 인터뷰를 처음부터 다시 해야 했다(실측 1건). 이제 평론이 서버에 저장된 뒤
+  // ReviewCompleteScreen 에서 지운다.
   const completeInterview = useCallback(async () => {
     setAwaitingChoice(false);
     if (interviewIdRef.current) {
       updateInterview(interviewIdRef.current, conversation, questionCount, "completed").catch(() => {});
     }
-    // 게스트는 드래프트를 만들지 않는다 — 여기서 지우면 로그아웃 상태로 남아있던
-    // 이전 계정의 드래프트를 대신 날려버린다.
-    if (!isGuest) await clearDraft();
-  }, [conversation, questionCount, isGuest]);
+  }, [conversation, questionCount]);
 
   // Restore from draft
   const restoreFromDraft = useCallback((

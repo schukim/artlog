@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -15,7 +15,7 @@ import type { RouteProp } from "@react-navigation/native";
 import type { ReviewStackParamList } from "../../types/navigation";
 import { generateReview } from "../../services/claude";
 import { createReview, linkInterviewToReview } from "../../services/review";
-import { saveUnsavedReview } from "../../utils/storage";
+import { upsertUnsavedReview, removeUnsavedReviewFor, clearDraft } from "../../utils/storage";
 import { markGuestInterviewUsed, saveGuestPendingReview } from "../../utils/guestStorage";
 import { resolveLlmLanguage } from "../../utils/llmLanguage";
 import { CATEGORY_ICONS } from "../../components/common/CategoryChip";
@@ -48,6 +48,45 @@ export function ReviewCompleteScreen() {
   const [saveResult, setSaveResult] = useState<"saved" | "queued" | null>(null);
   // 게스트가 '저장하기'를 눌렀을 때의 로그인 유도 모달
   const [showGuestSaveDialog, setShowGuestSaveDialog] = useState(false);
+  // 서버 저장에 성공했는지 — 성공 후에는 로컬 보관본을 다시 만들지 않는다.
+  const savedRef = useRef(false);
+  // 언마운트 시점에 화면의 최신 텍스트(사용자 편집분 포함)를 읽기 위한 참조.
+  const latestRef = useRef({ title: "", body: "" });
+  useEffect(() => {
+    latestRef.current = { title: reviewTitle, body: reviewText };
+  }, [reviewTitle, reviewText]);
+
+  // 로그인 사용자의 평론을 기기에 보관한다.
+  //
+  // 왜: 평론은 화면 진입과 동시에 자동 생성되지만 서버 저장은 '저장하기'를 눌러야 일어난다.
+  // 그 사이에 화면을 벗어나면 10~20분짜리 인터뷰 결과가 통째로 사라졌다 —
+  // 실측으로 완료된 인터뷰 62건 중 4건이 평론 없이 끝났고, 그중 3건은 생성까지 됐던 건이다.
+  // (게스트는 persistGuestReview 로 이미 보호받고 있었다. 가입한 쪽이 덜 보호받던 셈.)
+  // 보관분은 다음 실행 때 syncUnsavedReviews 가 서버로 올린다.
+  const persistLocalReview = async (title: string, body: string) => {
+    if (isGuest || !user || !body.trim() || savedRef.current) return;
+    try {
+      await upsertUnsavedReview({
+        userId: user.id,
+        contentId: content.id,
+        title: title || null,
+        body,
+        experienceDate: null,
+        interviewId,
+        savedAt: new Date().toISOString(),
+      });
+    } catch (e) {
+      console.error("persistLocalReview failed:", e);
+    }
+  };
+
+  // 화면을 벗어날 때 편집분까지 보관 — 저장에 성공했다면 savedRef 가 막는다.
+  useEffect(() => {
+    return () => {
+      void persistLocalReview(latestRef.current.title, latestRef.current.body);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     // 미리보기에서 이미 생성한 평론을 받았으면 재생성(LLM 재호출)하지 않는다
@@ -55,6 +94,11 @@ export function ReviewCompleteScreen() {
     if (isGuest && initialReview) {
       consumeGuestTrial();
       void persistGuestReview(initialReview.suggestedTitle, initialReview.reviewText);
+    }
+    // 미리보기에서 완성된 평론을 들고 들어온 경우도 즉시 보관한다 —
+    // 언마운트를 기다리면 앱이 강제 종료될 때 그대로 사라진다.
+    if (initialReview) {
+      void persistLocalReview(initialReview.suggestedTitle, initialReview.reviewText);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -109,6 +153,8 @@ export function ReviewCompleteScreen() {
         setReviewTitle(result.suggested_title);
         consumeGuestTrial();
         void persistGuestReview(result.suggested_title, result.review_text);
+        // 생성 즉시 보관 — 여기서부터는 화면을 어떻게 벗어나도 평론이 남는다.
+        void persistLocalReview(result.suggested_title, result.review_text);
       } else {
         setGenerateError(true);
       }
@@ -147,11 +193,18 @@ export function ReviewCompleteScreen() {
         await linkInterviewToReview(interviewId, review.id);
       }
 
+      // 여기까지 와야 평론이 안전하다. 로컬 보관본과 인터뷰 드래프트를 이제 걷어낸다
+      // — 드래프트는 예전엔 인터뷰를 마치는 순간 지웠는데, 그러면 평론 생성이 실패했을 때
+      //   사용자가 돌아갈 곳이 사라졌다(실측 1건).
+      savedRef.current = true;
+      await removeUnsavedReviewFor(user.id, content.id, interviewId);
+      await clearDraft();
+
       setSaveResult("saved");
       setTimeout(() => navigation.popToTop(), 1500);
     } catch {
       // 서버 저장 실패 — 로컬 보관 후 연결되면 syncUnsavedReviews 가 자동 업로드
-      await saveUnsavedReview({
+      await upsertUnsavedReview({
         userId: user.id,
         contentId: content.id,
         title: reviewTitle || null,

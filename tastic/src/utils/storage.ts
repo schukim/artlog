@@ -80,10 +80,40 @@ async function getAllUnsavedReviews(): Promise<UnsavedReview[]> {
   return raw ? JSON.parse(raw) : [];
 }
 
-export async function saveUnsavedReview(review: UnsavedReview): Promise<void> {
+// 같은 (계정·작품·인터뷰) 조합은 한 건만 유지한다.
+// 평론 한 편은 생성 직후·편집 후 이탈·저장 실패 시점에 각각 보관되므로,
+// 단순 push 로는 같은 평론이 여러 벌 쌓여 syncUnsavedReviews 가 중복 업로드한다.
+function isSameTarget(a: UnsavedReview, b: UnsavedReview): boolean {
+  return (
+    a.userId === b.userId &&
+    a.contentId === b.contentId &&
+    (a.interviewId ?? "") === (b.interviewId ?? "")
+  );
+}
+
+export async function upsertUnsavedReview(review: UnsavedReview): Promise<void> {
   const existing = await getAllUnsavedReviews();
-  existing.push(review);
-  await AsyncStorage.setItem(UNSAVED_REVIEWS_KEY, JSON.stringify(existing));
+  const others = existing.filter((r) => !isSameTarget(r, review));
+  others.push(review);
+  await AsyncStorage.setItem(UNSAVED_REVIEWS_KEY, JSON.stringify(others));
+}
+
+// 서버 저장에 성공했을 때 로컬 보관분을 걷어낸다.
+export async function removeUnsavedReviewFor(
+  userId: string,
+  contentId: string,
+  interviewId: string | null,
+): Promise<void> {
+  const existing = await getAllUnsavedReviews();
+  const others = existing.filter(
+    (r) =>
+      !(
+        r.userId === userId &&
+        r.contentId === contentId &&
+        (r.interviewId ?? "") === (interviewId ?? "")
+      ),
+  );
+  await AsyncStorage.setItem(UNSAVED_REVIEWS_KEY, JSON.stringify(others));
 }
 
 // 해당 계정의 미저장 평론만 반환 — 타 계정 명의 업로드 방지
