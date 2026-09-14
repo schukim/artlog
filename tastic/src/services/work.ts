@@ -88,6 +88,12 @@ export async function saveVerifiedWork(
   return data.work as Work;
 }
 
+// 제목 완전일치(정규화 후) 행만 재사용한다. 유사도 근접 매칭은 쓰지 않는다 —
+// 실측상 오타↔정답이 0.80, 1편↔속편이 0.87 이라 "붙여야 할 쌍"보다 "떼야 할 쌍"의
+// 점수가 높다. 어떤 임계값을 잡아도 둘 중 하나는 틀리므로, 여기선 확실한 중복
+// (같은 제목·같은 카테고리)만 합치고 나머지는 새 행으로 둔다.
+const EXACT_TITLE_MATCH = 0.999;
+
 // 동일 작품이 카탈로그에 있으면 재사용, 없으면 새로 생성.
 // search_works RPC로 외부 ingestion 작품도 매칭한다.
 export async function findOrCreateWork(
@@ -102,9 +108,14 @@ export async function findOrCreateWork(
     metadata?: Record<string, unknown>;
   }
 ): Promise<Work> {
+  // 임베딩을 넘기지 않으므로 제목 trigram 유사도만으로 0~1 스케일이 되도록 가중치를 조정한다.
+  // (기본값 trigram 0.4 / embedding 0.6 이면 점수 상한이 0.40 이라 재사용 판정이 한 번도
+  //  성립하지 않았고, 수동입력마다 중복 행이 쌓였다 — 실측 'Speed Drive' 4행)
   const { data: matches, error: searchError } = await supabase.rpc("search_works", {
     query_text: contentInfo.title,
     target_category: contentInfo.category,
+    trigram_weight: 1.0,
+    embedding_weight: 0.0,
     limit_count: 5,
   });
 
@@ -112,8 +123,11 @@ export async function findOrCreateWork(
     console.error("findOrCreateWork search error:", searchError);
   }
 
-  const best = matches?.[0];
-  if (best && best.similarity_score >= 0.85) {
+  // similarity_score 는 창작자 보너스(+0.15)가 섞여 1.00 이 되어도 제목이 같다는 보장이 없다.
+  // 제목 일치 여부는 trigram_score 로만 판단하고, 동점이면 신뢰 행을 우선한다.
+  const exact = (matches ?? []).filter((m) => (m.trigram_score ?? 0) >= EXACT_TITLE_MATCH);
+  const best = exact.find((m) => m.is_verified || m.primary_source != null) ?? exact[0];
+  if (best) {
     const { data, error } = await supabase
       .from("works")
       .select("*")

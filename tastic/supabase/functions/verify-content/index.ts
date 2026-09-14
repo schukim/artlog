@@ -42,11 +42,98 @@ const SERVICE_ROLE_KEY = Deno.env.get("SB_SERVICE_ROLE_KEY") ?? Deno.env.get("SU
 // '재검색'(skipCache=true) 버튼으로 웹서치를 강제할 수 있어 안전망이 된다.
 const CACHE_SIMILARITY_THRESHOLD = 0.85;
 
+// ── 질의 메모 캐시 TTL ──
+// works 캐시가 "작품"을 기억한다면 이쪽은 "유저가 친 문자열"을 기억한다. 확정까지 가지 않은
+// 검색도 학습되므로, 같은 문자열의 2회차부터는 웹서치 비용이 0이 된다.
+// 찾은 결과는 오래 유효하다(작품 메타데이터는 거의 변하지 않는다).
+const MEMO_TTL_DAYS_FOUND = 90;
+// "못 찾음"은 짧게 — 신작이 며칠 뒤 신뢰 소스에 올라올 수 있다. 그래도 반복 과금은 막는다.
+const MEMO_TTL_DAYS_EMPTY = 3;
+// 메모 조회가 지연돼도 전체 예산을 먹지 않게 하는 자체 상한.
+const MEMO_TIMEOUT_MS = 2_000;
+
 // deno-lint-ignore no-explicit-any
 let _sb: any = null;
 function supabase() {
   if (!_sb) _sb = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
   return _sb;
+}
+
+// ── 질의 메모 캐시 ──
+// 키는 유저가 실제로 친 문자열(+카테고리·언어·창작자 힌트)이고, 매칭은 정규화 후 완전일치다.
+// 유사도 판정을 쓰지 않는 이유: 실측상 오타↔정답이 0.80, 1편↔속편이 0.87 이라
+// 붙여야 할 쌍보다 떼야 할 쌍의 점수가 높다 — 안전한 임계값이 존재하지 않는다.
+// 완전일치라 속편을 1편으로 흡수할 여지가 구조적으로 없다.
+
+// deno-lint-ignore no-explicit-any
+async function withTimeout<T>(p: PromiseLike<T>, ms: number, fallback: any): Promise<T> {
+  return (await Promise.race([
+    p,
+    new Promise((resolve) => setTimeout(() => resolve(fallback), ms)),
+  ])) as T;
+}
+
+function memoLang(language: unknown): string {
+  return language === "en" ? "en" : "ko";
+}
+
+// 히트하면 candidates 배열, 미스면 null. 어떤 실패도 미스로 처리한다(웹서치로 폴백).
+async function memoGet(
+  title: string,
+  category: string,
+  language: unknown,
+  creator: string | undefined,
+): Promise<unknown[] | null> {
+  try {
+    if (!SUPABASE_URL || !SERVICE_ROLE_KEY) return null;
+    const { data, error } = await withTimeout(
+      supabase().rpc("search_memo_get", {
+        p_query: title,
+        p_category: category,
+        p_language: memoLang(language),
+        p_creator: creator ?? null,
+      }),
+      MEMO_TIMEOUT_MS,
+      { data: null, error: { message: "memo lookup timeout" } },
+    );
+    if (error) {
+      console.error("memoGet error:", error);
+      return null;
+    }
+    return Array.isArray(data) ? data : null;
+  } catch (e) {
+    console.error("memoGet failed — 웹서치로 폴백:", e);
+    return null;
+  }
+}
+
+// 웹서치가 끝난 뒤 결과를 적재. 빈 결과도 저장한다 — "못 찾음"의 반복이 곧 반복 과금이다.
+// 적재 실패는 응답을 막지 않는다(다음 호출이 다시 웹서치할 뿐).
+async function memoPut(
+  title: string,
+  category: string,
+  language: unknown,
+  creator: string | undefined,
+  candidates: unknown[],
+): Promise<void> {
+  try {
+    if (!SUPABASE_URL || !SERVICE_ROLE_KEY) return;
+    const { error } = await withTimeout(
+      supabase().rpc("search_memo_put", {
+        p_query: title,
+        p_category: category,
+        p_candidates: candidates,
+        p_language: memoLang(language),
+        p_creator: creator ?? null,
+        p_ttl_days: candidates.length > 0 ? MEMO_TTL_DAYS_FOUND : MEMO_TTL_DAYS_EMPTY,
+      }),
+      MEMO_TIMEOUT_MS,
+      { error: { message: "memo put timeout" } },
+    );
+    if (error) console.error("memoPut error:", error);
+  } catch (e) {
+    console.error("memoPut failed:", e);
+  }
 }
 
 // search_works RPC로 카탈로그를 훑어, 신뢰할 수 있는 캐시 작품이 있으면 candidate로 합성해 반환.
@@ -77,11 +164,19 @@ async function lookupCache(title: string, category: string) {
       console.error("lookupCache search_works error:", error);
       return null;
     }
-    const best = data?.[0];
+    // search_works 는 유사도 내림차순으로 최대 5행을 준다.
+    // 예전엔 맨 앞 한 행만 보고 판정했는데, 수동입력으로 생긴 비신뢰 행이 오타 제목과
+    // 1.00 으로 붙어 맨 앞에 서면 2번째의 진짜 신뢰 행을 보지도 못하고 웹서치로 떨어졌다
+    // (실측: 'Feel so good' → 비신뢰 1.00 / 'Feels So Good' 신뢰 0.80 → 매번 재검색).
+    // 이제 신뢰 행 중 임계 이상인 첫 행을 고른다 — 정렬이 점수순이므로 첫 행이 곧 최선.
+    // deno-lint-ignore no-explicit-any
+    const rows = (data ?? []) as any[];
+    const best = rows.find(
+      (r) =>
+        (r.is_verified === true || r.primary_source != null) &&
+        r.similarity_score >= CACHE_SIMILARITY_THRESHOLD
+    );
     if (!best) return null;
-    // 신뢰 행만 캐시로 인정: 유저가 확정해 승격된 행(is_verified) 또는 외부 ingestion(primary_source)
-    const trusted = best.is_verified === true || best.primary_source != null;
-    if (best.similarity_score < CACHE_SIMILARITY_THRESHOLD || !trusted) return null;
     const candidate = {
       title: best.title,
       original_title: best.original_title ?? null,
@@ -91,7 +186,13 @@ async function lookupCache(title: string, category: string) {
       metadata: best.metadata ?? {},
       confidence: "high",
     };
-    return { candidate, source_work_id: best.id as string, similarity: best.similarity_score as number };
+    return {
+      candidate,
+      source_work_id: best.id as string,
+      similarity: best.similarity_score as number,
+      // 0 이 아니면 앞선 비신뢰 행에 가려져 있던 히트 — 그림자 발생 빈도 추적용
+      rank: rows.indexOf(best),
+    };
   } catch (e) {
     console.error("lookupCache failed — 웹서치로 폴백:", e);
     return null;
@@ -413,11 +514,37 @@ Deno.serve(async (req) => {
     // ── 0단계: 글로벌 캐시 조회 ──
     // skipCache=true('재검색')면 건너뛰고 바로 웹서치. 아니면 캐시 히트 시 웹서치 스킵.
     if (!skipCache) {
+      // 0-a. 질의 메모 — 같은 문자열을 전에 검색한 적이 있으면 그 결과를 그대로 돌려준다.
+      // 확정까지 가지 않은 검색도 여기 남으므로, 반복 검색은 2회차부터 비용이 0이다.
+      const memo = await memoGet(title, category, language, creator);
+      if (memo) {
+        const ms = Date.now() - t0;
+        console.log("verify-content memo hit:", JSON.stringify({
+          title, category, ms, count: memo.length,
+        }));
+        return new Response(
+          JSON.stringify({
+            candidates: memo,
+            _debug: {
+              // 클라이언트는 이 값으로 '재검색' 버튼을 띄운다 — 메모 결과도 갱신 가능해야 한다.
+              cache_hit: true,
+              memo_hit: true,
+              ms,
+              search_count: 0,
+              cited_domains: [],
+            },
+          }),
+          { headers: { ...CORS, "Content-Type": "application/json" } }
+        );
+      }
+
+      // 0-b. works 카탈로그 캐시 (기존 경로)
       const hit = await lookupCache(title, category);
       if (hit) {
         const ms = Date.now() - t0;
         console.log("verify-content cache hit:", JSON.stringify({
           title, category, ms, source_work_id: hit.source_work_id, similarity: hit.similarity,
+          rank: hit.rank,
         }));
         return new Response(
           JSON.stringify({
@@ -550,6 +677,13 @@ ${findings}
         }
       }
     }
+
+    // ── 메모 적재 ──
+    // 웹서치를 실제로 돌린 경우에만 도달한다. 빈 결과도 저장한다 — 같은 문자열을 다시 쳐도
+    // 또 웹서치하는 것이 이번 사건(오타 1건 4회 검색)의 직접 원인이었다.
+    // skipCache('재검색')로 온 요청도 여기서 덮어쓰므로 낡은 메모가 갱신된다.
+    const finalCandidates = (parsed as { candidates?: unknown[] })?.candidates ?? [];
+    await memoPut(title, category, language, creator, finalCandidates);
 
     trace.ms = Date.now() - t0; // 전체 합산
 
