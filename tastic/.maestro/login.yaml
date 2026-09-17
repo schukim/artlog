@@ -42,6 +42,14 @@ tags:
 - tapOn:
     id: "login-submit-button"
 
+# iOS 암호 저장 제안 팝업 — 시뮬레이터에서 처음 로그인하면 뜬다. 홈 화면을
+# 가려 뒤 스텝의 요소 탐색을 막으므로, 뜨면 넘긴다.
+- runFlow:
+    when:
+      visible: "지금 안 함"
+    commands:
+      - tapOn: "지금 안 함"
+
 # 로그인 후 평론(홈) 탭이 뜬다. 인증 왕복이 있어 넉넉히 기다린다.
 - extendedWaitUntil:
     visible:
