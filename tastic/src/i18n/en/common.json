@@ -193,6 +193,20 @@
       "exitConfirmCancel": "Keep writing",
       "goHome": "Go to Home"
     },
+    "feedback": {
+      "prompt": "How was this review?",
+      "thanks": "Thank you",
+      "editLink": "Change my answer",
+      "reasonPrompt": "What could be better? (optional)",
+      "reasonNotMine": "It says things I didn't say",
+      "reasonQuestions": "The questions didn't draw out my thoughts",
+      "reasonFacts": "The details about the work were wrong",
+      "reasonTone": "The tone or wording felt off",
+      "reasonThin": "It felt thin",
+      "reasonOther": "Something else",
+      "commentPlaceholder": "A quick note helps too",
+      "submit": "Send"
+    },
     "draft": {
       "title": "Previous Interview",
       "message": "You have an unfinished interview for '{{title}}'.",

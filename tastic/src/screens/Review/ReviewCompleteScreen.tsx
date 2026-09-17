@@ -21,6 +21,7 @@ import { resolveLlmLanguage } from "../../utils/llmLanguage";
 import { CATEGORY_ICONS } from "../../components/common/CategoryChip";
 import { GuestSignInDialog } from "../../components/common/GuestSignInDialog";
 import { ConfirmDialog } from "../../components/common/ConfirmDialog";
+import { ReviewFeedbackWidget } from "../../components/review/ReviewFeedbackWidget";
 import { useAuthStore } from "../../stores/authStore";
 import { useGuestStore } from "../../stores/guestStore";
 
@@ -47,6 +48,22 @@ export function ReviewCompleteScreen() {
   const [generateErrorMessage, setGenerateErrorMessage] = useState<string | null>(null);
   // saved: 서버 저장 성공 / queued: 실패해 로컬 보관 (연결 시 syncUnsavedReviews 가 업로드)
   const [saveResult, setSaveResult] = useState<"saved" | "queued" | null>(null);
+  // 저장된 평론의 id — 만족도 피드백을 이 리뷰에 매단다.
+  const [savedReviewId, setSavedReviewId] = useState<string | null>(null);
+  // 저장 후 자동으로 홈으로 돌아가는 타이머. 피드백 위젯과 상호작용을 시작하면 취소한다 —
+  // 그렇지 않으면 사용자가 이유를 고르는 도중에 화면이 밀려난다.
+  const savedNavTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cancelSavedNavTimer = () => {
+    if (savedNavTimerRef.current) {
+      clearTimeout(savedNavTimerRef.current);
+      savedNavTimerRef.current = null;
+    }
+  };
+  useEffect(() => {
+    return () => {
+      if (savedNavTimerRef.current) clearTimeout(savedNavTimerRef.current);
+    };
+  }, []);
   // 게스트가 '저장하기'를 눌렀을 때의 로그인 유도 모달
   const [showGuestSaveDialog, setShowGuestSaveDialog] = useState(false);
   // 서버 저장에 성공했는지 — 성공 후에는 로컬 보관본을 다시 만들지 않는다.
@@ -254,8 +271,10 @@ export function ReviewCompleteScreen() {
       await removeUnsavedReviewFor(user.id, content.id, interviewId);
       await clearDraft();
 
+      setSavedReviewId(review.id);
       setSaveResult("saved");
-      setTimeout(() => navigation.popToTop(), 1500);
+      // 만족도 피드백을 볼 시간을 준다 — 사용자가 위젯을 건드리면 cancelSavedNavTimer 가 이 타이머를 끈다.
+      savedNavTimerRef.current = setTimeout(() => navigation.popToTop(), 6000);
     } catch {
       // 서버 저장 실패 — 로컬 보관 후 연결되면 syncUnsavedReviews 가 자동 업로드
       await upsertUnsavedReview({
@@ -314,24 +333,58 @@ export function ReviewCompleteScreen() {
     );
   }
 
-  // Save result toast — 서버 저장(saved)과 로컬 임시 저장(queued)을 구분해 안내
-  if (saveResult) {
+  // 저장 성공 — 평론 본문 아래에 만족도 피드백을 보여준다. 일정 시간 뒤 자동으로
+  // 홈으로 돌아가지만(savedNavTimerRef), 피드백 위젯과 상호작용하면 그 타이머는 취소된다.
+  if (saveResult === "saved") {
     return (
-      <SafeAreaView className="flex-1 bg-surface justify-center items-center px-8">
-        {saveResult === "saved" ? (
-          <View className="bg-success/10 rounded-2xl p-8 items-center">
-            <Text className="text-success text-4xl mb-4">✓</Text>
+      <SafeAreaView testID="review-complete-screen" className="flex-1 bg-surface">
+        <ScrollView className="flex-1 px-6 pt-6" contentContainerClassName="pb-8">
+          <View className="flex-row items-center mb-6">
+            <Text className="text-success text-xl mr-2">✓</Text>
             <Text className="text-text text-lg font-semibold">{t("review.complete.saved")}</Text>
           </View>
-        ) : (
-          <View className="bg-surface-tertiary rounded-2xl p-8 items-center">
-            <Text className="text-4xl mb-4">☁️</Text>
-            <Text className="text-text text-lg font-semibold mb-2">{t("review.complete.queued")}</Text>
-            <Text className="text-text-secondary text-[15px] text-center">
-              {t("review.complete.queuedDesc")}
-            </Text>
-          </View>
-        )}
+
+          {reviewTitle ? (
+            <Text className="text-text text-xl font-bold mb-4">{reviewTitle}</Text>
+          ) : null}
+          <Text className="text-text text-base leading-7">{reviewText}</Text>
+
+          {user && savedReviewId ? (
+            <ReviewFeedbackWidget
+              reviewId={savedReviewId}
+              userId={user.id}
+              onInteract={cancelSavedNavTimer}
+            />
+          ) : null}
+        </ScrollView>
+
+        <View className="px-6 pb-6">
+          <Pressable
+            testID="review-saved-go-home-button"
+            className="bg-surface-tertiary rounded-xl py-4 items-center"
+            onPress={() => {
+              cancelSavedNavTimer();
+              navigation.popToTop();
+            }}
+          >
+            <Text className="text-text font-semibold text-base">{t("review.complete.goHome")}</Text>
+          </Pressable>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // Save result toast (queued) — 저장 실패로 로컬 임시 보관됐을 때만 이 경로를 탄다.
+  if (saveResult === "queued") {
+    return (
+      <SafeAreaView className="flex-1 bg-surface justify-center items-center px-8">
+        <View className="bg-surface-tertiary rounded-2xl p-8 items-center">
+          <Text className="text-4xl mb-4">☁️</Text>
+          <Text className="text-text text-lg font-semibold mb-2">{t("review.complete.queued")}</Text>
+          <Text className="text-text-secondary text-[15px] text-center">
+            {t("review.complete.queuedDesc")}
+          </Text>
+        </View>
       </SafeAreaView>
     );
   }

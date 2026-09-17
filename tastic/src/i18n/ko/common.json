@@ -193,6 +193,20 @@
       "exitConfirmDiscard": "저장하지 않고 나가기",
       "exitConfirmCancel": "계속 쓰기"
     },
+    "feedback": {
+      "prompt": "이 평론, 마음에 드시나요?",
+      "thanks": "고맙습니다",
+      "editLink": "의견 바꾸기",
+      "reasonPrompt": "어떤 점이 아쉬웠나요? (선택)",
+      "reasonNotMine": "내가 말하지 않은 내용이 있어요",
+      "reasonQuestions": "질문이 내 감상을 끌어내지 못했어요",
+      "reasonFacts": "작품 정보가 틀렸어요",
+      "reasonTone": "문체·표현이 어색해요",
+      "reasonThin": "내용이 빈약해요",
+      "reasonOther": "그 외",
+      "commentPlaceholder": "한 줄로 적어주셔도 좋아요",
+      "submit": "보내기"
+    },
     "draft": {
       "title": "이전 인터뷰",
       "message": "이전에 진행 중이던 '{{title}}' 인터뷰가 있습니다.",

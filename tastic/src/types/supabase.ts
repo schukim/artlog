@@ -39,6 +39,54 @@ export type Database = {
   }
   public: {
     Tables: {
+      content_search_memo: {
+        Row: {
+          candidates: Json
+          category: Database["public"]["Enums"]["work_category"]
+          created_at: string
+          creator_normalized: string | null
+          creator_raw: string | null
+          expires_at: string
+          hit_count: number
+          id: string
+          is_empty: boolean
+          language: string
+          last_hit_at: string | null
+          query_normalized: string | null
+          query_raw: string
+        }
+        Insert: {
+          candidates: Json
+          category: Database["public"]["Enums"]["work_category"]
+          created_at?: string
+          creator_normalized?: string | null
+          creator_raw?: string | null
+          expires_at: string
+          hit_count?: number
+          id?: string
+          is_empty: boolean
+          language?: string
+          last_hit_at?: string | null
+          query_normalized?: string | null
+          query_raw: string
+        }
+        Update: {
+          candidates?: Json
+          category?: Database["public"]["Enums"]["work_category"]
+          created_at?: string
+          creator_normalized?: string | null
+          creator_raw?: string | null
+          expires_at?: string
+          hit_count?: number
+          id?: string
+          is_empty?: boolean
+          language?: string
+          last_hit_at?: string | null
+          query_normalized?: string | null
+          query_raw?: string
+        }
+        Relationships: []
+      }
       contents: {
         Row: {
           category: string
@@ -75,6 +123,30 @@ export type Database = {
           title?: string
           user_id?: string
           year?: number | null
+        }
+        Relationships: []
+      }
+      guest_usage: {
+        Row: {
+          action: string
+          count: number
+          day: string
+          guest_id: string
+          updated_at: string
+        }
+        Insert: {
+          action: string
+          count?: number
+          day: string
+          guest_id: string
+          updated_at?: string
+        }
+        Update: {
+          action?: string
+          count?: number
+          day?: string
+          guest_id?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -132,6 +204,7 @@ export type Database = {
           created_at: string
           id: string
           question_count: number
+          review_generate_count: number
           review_id: string | null
           status: string
           updated_at: string
@@ -143,6 +216,7 @@ export type Database = {
           created_at?: string
           id?: string
           question_count?: number
+          review_generate_count?: number
           review_id?: string | null
           status?: string
           updated_at?: string
@@ -154,6 +228,7 @@ export type Database = {
           created_at?: string
           id?: string
           question_count?: number
+          review_generate_count?: number
           review_id?: string | null
           status?: string
           updated_at?: string
@@ -195,6 +270,54 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "recommendations_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      review_feedback: {
+        Row: {
+          comment: string | null
+          created_at: string
+          id: string
+          rating: string
+          reason: string | null
+          review_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          rating: string
+          reason?: string | null
+          review_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          rating?: string
+          reason?: string | null
+          review_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "review_feedback_review_id_fkey"
+            columns: ["review_id"]
+            isOneToOne: false
+            referencedRelation: "reviews"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_feedback_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
@@ -343,6 +466,47 @@ export type Database = {
         }
         Relationships: []
       }
+      work_aliases: {
+        Row: {
+          alias_normalized: string | null
+          alias_raw: string
+          category: Database["public"]["Enums"]["work_category"]
+          created_at: string
+          hit_count: number
+          id: string
+          last_hit_at: string | null
+          work_id: string
+        }
+        Insert: {
+          alias_normalized?: string | null
+          alias_raw: string
+          category: Database["public"]["Enums"]["work_category"]
+          created_at?: string
+          hit_count?: number
+          id?: string
+          last_hit_at?: string | null
+          work_id: string
+        }
+        Update: {
+          alias_normalized?: string | null
+          alias_raw?: string
+          category?: Database["public"]["Enums"]["work_category"]
+          created_at?: string
+          hit_count?: number
+          id?: string
+          last_hit_at?: string | null
+          work_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_aliases_work_id_fkey"
+            columns: ["work_id"]
+            isOneToOne: false
+            referencedRelation: "works"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       works: {
         Row: {
           category: Database["public"]["Enums"]["work_category"]
@@ -356,6 +520,7 @@ export type Database = {
           last_synced_at: string | null
           metadata: Json
           original_title: string | null
+          original_title_normalized: string | null
           primary_source: string | null
           sync_status: string | null
           title: string
@@ -378,6 +543,7 @@ export type Database = {
           last_synced_at?: string | null
           metadata?: Json
           original_title?: string | null
+          original_title_normalized?: string | null
           primary_source?: string | null
           sync_status?: string | null
           title: string
@@ -400,6 +566,7 @@ export type Database = {
           last_synced_at?: string | null
           metadata?: Json
           original_title?: string | null
+          original_title_normalized?: string | null
           primary_source?: string | null
           sync_status?: string | null
           title?: string
@@ -444,6 +611,16 @@ export type Database = {
       }
     }
     Functions: {
+      consume_guest_usage: {
+        Args: {
+          p_action: string
+          p_day: string
+          p_global_limit: number
+          p_guest_id: string
+          p_limit: number
+        }
+        Returns: Json
+      }
       consume_usage: {
         Args: {
           p_action: string
@@ -515,7 +692,54 @@ export type Database = {
           verified_works: number
         }[]
       }
+      increment_review_generate_count: {
+        Args: { p_interview_id: string }
+        Returns: undefined
+      }
+      lookup_work_alias: {
+        Args: {
+          p_category: Database["public"]["Enums"]["work_category"]
+          p_query: string
+        }
+        Returns: {
+          creator: string
+          genre: string
+          id: string
+          metadata: Json
+          original_title: string
+          title: string
+          year: number
+        }[]
+      }
       normalize_title: { Args: { title: string }; Returns: string }
+      record_work_alias: {
+        Args: {
+          p_category: Database["public"]["Enums"]["work_category"]
+          p_query: string
+          p_work_id: string
+        }
+        Returns: undefined
+      }
+      search_memo_get: {
+        Args: {
+          p_category: Database["public"]["Enums"]["work_category"]
+          p_creator?: string
+          p_language?: string
+          p_query: string
+        }
+        Returns: Json
+      }
+      search_memo_put: {
+        Args: {
+          p_candidates: Json
+          p_category: Database["public"]["Enums"]["work_category"]
+          p_creator?: string
+          p_language?: string
+          p_query: string
+          p_ttl_days?: number
+        }
+        Returns: undefined
+      }
       search_works: {
         Args: {
           embedding_weight?: number
@@ -570,12 +794,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -599,11 +823,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -624,11 +848,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -649,11 +873,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -666,11 +890,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }

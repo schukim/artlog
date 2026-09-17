@@ -59,7 +59,18 @@ Deno.serve(async (req) => {
           .eq("id", interview_id)
           .eq("user_id", auth.userId)
           .maybeSingle();
-        if (interview) refId = interview_id;
+        if (interview) {
+          refId = interview_id;
+          // 재생성 횟수 계측. 실패해도 평론 생성 자체는 막지 않는다.
+          // 미리보기(is_preview)는 멤버십 정상 흐름이라 불만족 신호가 아니므로 세지 않는다.
+          if (is_preview !== true) {
+            const { error: countError } = await adminClient().rpc(
+              "increment_review_generate_count",
+              { p_interview_id: interview_id },
+            );
+            if (countError) console.error("increment_review_generate_count failed:", countError);
+          }
+        }
       }
 
       // 미리보기는 멤버십 전용, 최종 생성은 free 하루 1편 제한.
