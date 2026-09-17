@@ -46,7 +46,22 @@ async function callChatJson(
     signal: AbortSignal.timeout(timeoutMs),
   });
   const data = await res.json();
-  console.log("deepseek served:", data.model, "thinking:", thinking);
+  // req: 요청한 모델명. 벤더가 예고 없이 다른 모델로 라우팅해도 에러도 지표 이상도 없어서
+  //   (2026-09: deepseek-v4-flash 요청 → deepseek-flash 서빙) 요청/서빙을 나란히 남기지 않으면
+  //   사후에 "무엇을 요청했는지"를 재구성할 방법이 없다.
+  // usage: thinking:"disabled" 가 실제로 먹혔는지 보는 유일한 신호. 무시당하면 추론 토큰이
+  //   max_tokens 를 잠식해 에러 없이 응답 품질과 지연만 나빠진다. 필드 구성이 모델마다 달라
+  //   통째로 남긴다.
+  // 앞부분 "deepseek served: <모델>" 은 기존 로그 수집이 파싱하는 형태라 그대로 유지한다.
+  console.log(
+    "deepseek served:", data.model,
+    "req:", DEEPSEEK_MODEL,
+    "thinking:", thinking,
+    "usage:", JSON.stringify(data.usage ?? null),
+  );
+  if (data.model && data.model !== DEEPSEEK_MODEL) {
+    console.warn(`deepseek model mismatch: req=${DEEPSEEK_MODEL} served=${data.model}`);
+  }
   if (!res.ok) throw new Error(data.error?.message ?? `LLM HTTP ${res.status} (${DEEPSEEK_MODEL})`);
   const content = data.choices?.[0]?.message?.content;
   if (typeof content !== "string" || content.trim() === "") {
