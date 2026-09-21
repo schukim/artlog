@@ -59,9 +59,15 @@ maestro test -e E2E_EMAIL="$E2E_EMAIL" -e E2E_PASSWORD="$E2E_PASSWORD" .maestro/
 | `review-save.yaml` | **정상 경로** — 인터뷰 → 평론 생성 → 저장 | 필요 | 평론 1회 |
 | `review-recover.yaml` | **이탈 확인 다이얼로그 + 복구 카드** | 필요 | 평론 2회 |
 | `interview-draft.yaml` | **인터뷰 이탈 → 드래프트 복원** | 필요 | 질문 2회 |
+| `interview-invalid.yaml` | **무효 답변 처리(ISSUE-020)** — 판정은 Maestro 가 아니라 SQL | 필요 | 질문 5회 + 평론 1회 |
 
-뒤의 셋이 2026-09 에 고친 지점이다. 평론이 저장 전에 사라지던 경로와,
-평론 생성이 실패했을 때 돌아갈 길이 없던 문제.
+`review-save`·`review-recover`·`interview-draft` 셋이 2026-09 에 고친 지점이다.
+평론이 저장 전에 사라지던 경로와, 평론 생성이 실패했을 때 돌아갈 길이 없던 문제.
+
+`interview-invalid` 은 성격이 다르다 — 화면 전이가 아니라 **생성된 평론의 내용**을 본다.
+Maestro 는 저장까지만 수행하고, 합격 여부는 플로우 헤더 주석의 SQL 로 판정한다
+(컬럼은 `reviews.body` 다. 인터뷰어가 질문에 넣은 작품 정보는 `interviews.conversation`
+에서 확인한다). 2026-09-21 기준 4항 전부 통과.
 
 ## 테스트 계정
 
