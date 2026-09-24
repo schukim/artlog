@@ -7,7 +7,8 @@
 // gpt-4.1은 GA web_search + 도메인 필터를 지원한다 (gpt-4.1/nano, gpt-4o는 filters 미지원).
 
 const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY")!;
-export const OPENAI_MODEL = "gpt-4.1";
+// 재배포 없이 시크릿으로 교체 가능. 바꿀 모델은 web_search 도메인 필터 지원 여부를 먼저 확인할 것.
+export const OPENAI_MODEL = Deno.env.get("OPENAI_MODEL") ?? "gpt-4.1";
 export const OPENAI_URL = "https://api.openai.com/v1/responses";
 
 export const CORS = {
