@@ -136,3 +136,48 @@ describe("callJsonLLM 재시도", () => {
     expect(served?.slice(-2)).toEqual(["finish:", "stop"]);
   });
 });
+
+// ISSUE-022: 시크릿이 빠졌을 때 폴백이 배포본 값(deepseek-flash)과 달라 모델이 조용히 바뀌던 문제.
+describe("DEEPSEEK_MODEL 폴백", () => {
+  const fetchMock = vi.fn();
+  let warnSpy: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    fetchMock.mockReset();
+    fetchMock.mockImplementation(async () => chatResponse('{"a": 1}'));
+    vi.stubGlobal("fetch", fetchMock);
+    warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.spyOn(console, "log").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  function requestedModel(): unknown {
+    const init = fetchMock.mock.calls[0][1] as { body: string };
+    return JSON.parse(init.body).model;
+  }
+
+  it.each([
+    ["미설정", undefined],
+    ["빈 문자열", ""],
+  ])("%s이면 deepseek-flash 로 폴백하고 로드 시 1회 경고", async (_label, value) => {
+    const { callJsonLLM } = await loadLlm({ DEEPSEEK_API_KEY: "k", DEEPSEEK_MODEL: value });
+    await callJsonLLM("json prompt");
+    await callJsonLLM("json prompt");
+
+    expect(requestedModel()).toBe("deepseek-flash");
+    const fallbackWarns = warnSpy.mock.calls.filter((c) => c[0] === "DEEPSEEK_MODEL 미설정 — 폴백 사용:");
+    expect(fallbackWarns).toEqual([["DEEPSEEK_MODEL 미설정 — 폴백 사용:", "deepseek-flash"]]);
+  });
+
+  it("설정돼 있으면 그 값을 쓰고 경고하지 않는다", async () => {
+    const { callJsonLLM } = await loadLlm({ DEEPSEEK_API_KEY: "k", DEEPSEEK_MODEL: "deepseek-pro" });
+    await callJsonLLM("json prompt");
+
+    expect(requestedModel()).toBe("deepseek-pro");
+    expect(warnSpy.mock.calls.some((c) => c[0] === "DEEPSEEK_MODEL 미설정 — 폴백 사용:")).toBe(false);
+  });
+});

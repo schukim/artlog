@@ -9,7 +9,11 @@ const DEEPSEEK_API_KEY = Deno.env.get("DEEPSEEK_API_KEY") ?? "";
 
 const DEEPSEEK_URL = "https://api.deepseek.com/chat/completions";
 // "deepseek-chat" 은 2026-07-24 지원 종료된 레거시 별칭.
-const DEEPSEEK_MODEL = Deno.env.get("DEEPSEEK_MODEL") ?? "deepseek-v4-flash";
+// 폴백은 배포본 시크릿 DEEPSEEK_MODEL 과 같은 값으로 맞춘다 — 시크릿이 빠져도 모델이 바뀌지 않게.
+const DEEPSEEK_MODEL_FALLBACK = "deepseek-flash";
+const DEEPSEEK_MODEL_ENV = Deno.env.get("DEEPSEEK_MODEL");
+if (!DEEPSEEK_MODEL_ENV) console.warn("DEEPSEEK_MODEL 미설정 — 폴백 사용:", DEEPSEEK_MODEL_FALLBACK);
+const DEEPSEEK_MODEL = DEEPSEEK_MODEL_ENV || DEEPSEEK_MODEL_FALLBACK;
 
 export interface JsonLLMOptions {
   temperature?: number;
@@ -17,7 +21,7 @@ export interface JsonLLMOptions {
   // 시도당 타임아웃. 빈 응답 재시도는 드물고 빠르게 끝나므로
   // 사실상 이 값이 전체 소요 시간의 상한이다.
   timeoutMs?: number;
-  // v4-flash는 사고모드가 기본 enabled/high라서 명시하지 않으면 추론 토큰이
+  // deepseek-flash는 사고모드가 기본 enabled/high라서 명시하지 않으면 추론 토큰이
   // max_tokens를 잠식해 타임아웃(8~12초)에 걸릴 수 있다. 기본값은 끔.
   thinking?: "disabled" | "low" | "high" | "max";
 }
@@ -57,7 +61,7 @@ async function callChatJson(
   const data = await res.json();
   const finishReason: string | null = data.choices?.[0]?.finish_reason ?? null;
   // req: 요청한 모델명. 벤더가 예고 없이 다른 모델로 라우팅해도 에러도 지표 이상도 없어서
-  //   (2026-09: deepseek-v4-flash 요청 → deepseek-flash 서빙) 요청/서빙을 나란히 남기지 않으면
+  //   (2026-09: 당시 요청하던 deepseek-v4-flash 가 deepseek-flash 로 서빙됨) 요청/서빙을 나란히 남기지 않으면
   //   사후에 "무엇을 요청했는지"를 재구성할 방법이 없다.
   // usage: thinking:"disabled" 가 실제로 먹혔는지 보는 유일한 신호. 무시당하면 추론 토큰이
   //   max_tokens 를 잠식해 에러 없이 응답 품질과 지연만 나빠진다. 필드 구성이 모델마다 달라
