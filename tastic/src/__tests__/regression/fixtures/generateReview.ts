@@ -1,3 +1,4 @@
+// 실제 사용자 인터뷰 원문(식별 정보 제거). 저장소를 공개하거나 협업자를 추가하기 전에 바꿔 쓴 버전으로 교체할 것.
 // generate-review 회귀 픽스처. 입력은 Edge Function 요청 바디의 content / conversation_history 와 같은 형태.
 
 export interface ReviewFixture {
