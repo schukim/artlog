@@ -98,6 +98,43 @@ describe("callJsonLLM 재시도", () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
+  // ISSUE-024: 재시도까지 합쳐 클라이언트 타임아웃(30초) 안에 끝나야 한다.
+  describe("totalTimeoutMs 합산 예산", () => {
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ["Date"] });
+    });
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("첫 시도가 예산을 거의 다 쓰면 재시도하지 않고 첫 에러를 던진다", async () => {
+      fetchMock.mockImplementationOnce(async () => {
+        vi.advanceTimersByTime(23_000);
+        return chatResponse('{"review": "cut"}', "length");
+      });
+      const { callJsonLLM } = await loadLlm(env);
+
+      await expect(
+        callJsonLLM("json prompt", { timeoutMs: 25_000, totalTimeoutMs: 27_000 }),
+      ).rejects.toThrow(/finish: length/);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    it("재시도는 남은 예산만큼만 타임아웃을 건다", async () => {
+      const timeoutSpy = vi.spyOn(AbortSignal, "timeout");
+      fetchMock
+        .mockImplementationOnce(async () => {
+          vi.advanceTimersByTime(10_000);
+          return chatResponse("");
+        })
+        .mockResolvedValueOnce(chatResponse('{"a": 1}'));
+      const { callJsonLLM } = await loadLlm(env);
+
+      await callJsonLLM("json prompt", { timeoutMs: 25_000, totalTimeoutMs: 27_000 });
+      expect(timeoutSpy.mock.calls.map((c) => c[0])).toEqual([25_000, 17_000]);
+    });
+  });
+
   it("빈 content → 1회 재시도 후 성공", async () => {
     fetchMock
       .mockResolvedValueOnce(chatResponse(""))

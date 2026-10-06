@@ -18,9 +18,12 @@ const DEEPSEEK_MODEL = DEEPSEEK_MODEL_ENV || DEEPSEEK_MODEL_FALLBACK;
 export interface JsonLLMOptions {
   temperature?: number;
   maxTokens?: number;
-  // 시도당 타임아웃. 빈 응답 재시도는 드물고 빠르게 끝나므로
-  // 사실상 이 값이 전체 소요 시간의 상한이다.
+  // 시도당 타임아웃.
   timeoutMs?: number;
+  // 첫 시도 + 재시도 합산 예산. 지정하면 재시도는 남은 시간만 쓰고, 남은 시간이
+  // MIN_RETRY_MS 미만이면 재시도 없이 첫 에러를 던진다 — 클라이언트가 먼저 끊은 뒤
+  // 서버가 재시도에 시간을 쓰는 것을 막는다. 미지정이면 시도마다 timeoutMs 전체.
+  totalTimeoutMs?: number;
   // deepseek-flash는 사고모드가 기본 enabled/high라서 명시하지 않으면 추론 토큰이
   // max_tokens를 잠식해 타임아웃(8~12초)에 걸릴 수 있다. 기본값은 끔.
   thinking?: "disabled" | "low" | "high" | "max";
@@ -91,11 +94,21 @@ async function callChatJson(
   }
 }
 
+// 이보다 짧게 남았으면 재시도해도 응답을 받기 어렵다.
+const MIN_RETRY_MS = 5_000;
+
 export async function callJsonLLM(prompt: string, options: JsonLLMOptions = {}): Promise<unknown> {
   if (!DEEPSEEK_API_KEY) throw new Error("DEEPSEEK_API_KEY 미설정");
+  const { totalTimeoutMs, ...attemptOptions } = options;
+  const timeoutMs = attemptOptions.timeoutMs ?? 15_000;
+  const startedAt = Date.now();
   try {
-    return await callChatJson(prompt, options);
+    return await callChatJson(prompt, {
+      ...attemptOptions,
+      timeoutMs: totalTimeoutMs === undefined ? timeoutMs : Math.min(timeoutMs, totalTimeoutMs),
+    });
   } catch (e) {
+    let retryOptions: JsonLLMOptions = attemptOptions;
     if (e instanceof EmptyContentError) {
       console.error("callJsonLLM: 빈 응답 — 1회 재시도:", e);
     } else if (e instanceof MalformedJsonError) {
@@ -106,6 +119,14 @@ export async function callJsonLLM(prompt: string, options: JsonLLMOptions = {}):
     } else {
       throw e;
     }
-    return await callChatJson(prompt, options);
+    if (totalTimeoutMs !== undefined) {
+      const remaining = totalTimeoutMs - (Date.now() - startedAt);
+      if (remaining < MIN_RETRY_MS) {
+        console.error("callJsonLLM: 예산 소진 — 재시도 생략:", { remainingMs: remaining });
+        throw e;
+      }
+      retryOptions = { ...retryOptions, timeoutMs: Math.min(timeoutMs, remaining) };
+    }
+    return await callChatJson(prompt, retryOptions);
   }
 }

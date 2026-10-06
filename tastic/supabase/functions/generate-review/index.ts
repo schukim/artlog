@@ -9,13 +9,22 @@ const CORS = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-guest-id",
 };
 
-async function callLLM(prompt: string, temperature = 0.4, maxTokens = 3072) {
+// thinking "low" 에서도 reasoning 이 2600 토큰을 넘는 콜이 있어(10-04: completion 3037/3072,
+// reasoning 2647) 3072 로는 본문 몫이 ~400 토큰뿐이었다 (ISSUE-024).
+// 4096 상한: 실측 ~180 tok/s 라 그 이상은 시도당 25초 안에 다 못 쓴다.
+async function callLLM(prompt: string, temperature = 0.4, maxTokens = 4096) {
   // 로컬 E2E용 mock — MOCK_LLM=true일 때만 동작 (배포 환경엔 미설정)
   if (Deno.env.get("MOCK_LLM") === "true") {
     return { thesis: "[mock] 논지", review_text: "[mock] 평론 본문", suggested_title: "[mock] 제목" };
   }
-  // 클라이언트 타임아웃 30초 — 콜드스타트·전송 여유를 남기고 25초
-  return callJsonLLM(prompt, { temperature, maxTokens, timeoutMs: 25_000, thinking: "low" });
+  // 클라이언트 타임아웃 30초 — 콜드스타트·전송 여유를 남기고 시도당 25초, 재시도 포함 합산 27초.
+  return callJsonLLM(prompt, {
+    temperature,
+    maxTokens,
+    timeoutMs: 25_000,
+    totalTimeoutMs: 27_000,
+    thinking: "low",
+  });
 }
 
 Deno.serve(async (req) => {
