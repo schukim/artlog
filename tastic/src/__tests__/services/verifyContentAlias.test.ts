@@ -122,6 +122,39 @@ describe("runAliasStage — 2패스 진입 예산 (ISSUE-032)", () => {
     expect(r.suggestedTitles).toBeUndefined();
   });
 
+  describe("해석 상한 (ISSUE-034)", () => {
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ["Date"] });
+    });
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("남은 20초면 해석에 14초를 주고, 9초를 넘겨 끝나도 성공으로 별칭을 쓴다", async () => {
+      const d = deps([20_000, 20_000, 10_000], { aliases: ["Digger", "디거"], timedOut: false });
+      d.resolveAliases.mockImplementationOnce(async () => {
+        vi.advanceTimersByTime(10_000);
+        return { aliases: ["Digger", "디거"], timedOut: false };
+      });
+
+      const r = await runAliasStage("디러", d);
+
+      expect(d.resolveAliases).toHaveBeenCalledWith(14_000);
+      expect(r.resolveMs).toBe(10_000);
+      expect(r.timeoutStage).toBeNull();
+      expect(r.aliasOutcome).toBe("no_budget");
+      expect(r.suggestedTitles).toEqual(["Digger", "디거"]);
+    });
+
+    it("남은 10초면 해석 예산은 10초로 제한된다", async () => {
+      const d = deps([10_000, 10_000, 1_000], { aliases: ["Digger"], timedOut: false });
+
+      await runAliasStage("디러", d);
+
+      expect(d.resolveAliases).toHaveBeenCalledWith(10_000);
+    });
+  });
+
   it("해석 진입 예산도 없으면 아무것도 시작하지 않는다", async () => {
     const d = deps([8_000], { aliases: ["Digger"], timedOut: false });
 

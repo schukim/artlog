@@ -2,8 +2,12 @@
 // 예산 판단을 Vitest(src/__tests__/services/verifyContentAlias.test.ts)로 검증한다.
 // 외부 호출(웹서치)은 deps 로 주입받는다.
 
-// 별칭 해석(원제 문자열만 알아내는 짧은 질의) 상한. 실측 ~6초.
-export const ALIAS_RESOLVE_BUDGET_MS = 9_000;
+// 별칭 해석(원제 문자열만 알아내는 짧은 질의)을 시작하는 최소 남은 예산.
+export const ALIAS_RESOLVE_MIN_BUDGET_MS = 9_000;
+// 별칭 해석 상한 (ISSUE-034). 9초일 땐 조사 몫(70%)이 6.3초라 실측 ~6초 조사가 간헐적으로
+// 타임아웃했고, 해석이 실패하면 별칭이 없어 suggested_titles 도 못 낸다. 남은 예산이 더 적으면
+// 남은 만큼만 쓴다(전체 28초 예산은 그대로).
+export const ALIAS_RESOLVE_BUDGET_MS = 14_000;
 // 찾은 원제로 화이트리스트 검색을 다시 도는 2패스 상한. 실측 ~11초.
 export const ALIAS_RESEARCH_BUDGET_MS = 13_000;
 // 2패스를 시작하는 최소 남은 예산 (ISSUE-032). 실측 ~11초 걸리는 재검색을 5~10초로 시작하면
@@ -68,7 +72,7 @@ export async function runAliasStage<P>(title: string, deps: AliasStageDeps<P>): 
 
   // 예산이 별칭 해석분도 안 되면 시작하지 않는다. 반쯤 하다 끊기면 시간만 버리고
   // 클라이언트 타임아웃을 유발한다 — 1패스 결과를 그대로 주는 편이 항상 낫다.
-  if (deps.remainingMs() < ALIAS_RESOLVE_BUDGET_MS) {
+  if (deps.remainingMs() < ALIAS_RESOLVE_MIN_BUDGET_MS) {
     result.aliasOutcome = "no_budget";
     return result;
   }
