@@ -58,6 +58,9 @@ export interface VerifyContentDebug {
 
 export interface VerifyContentResponse {
   candidates: ContentCandidate[];
+  // 서버가 별칭(원제·정정 표기)을 찾았지만 시간 예산 안에 재검색까지 못 했을 때의 정정 제목 후보.
+  // 후보가 0건이면 "혹시 '…'를 찾으시나요?" 칩으로 띄운다 (ISSUE-032). 최대 3개.
+  suggested_titles?: string[];
   _debug?: VerifyContentDebug;
 }
 

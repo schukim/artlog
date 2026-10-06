@@ -22,6 +22,11 @@ import { useAuthStore } from "../../stores/authStore";
 import { useGuestStore } from "../../stores/guestStore";
 import { guestWorkToLocalWork } from "../../utils/guestWork";
 import { resolveLlmLanguage } from "../../utils/llmLanguage";
+import {
+  koreanObjectParticle,
+  freshSearchRequest,
+  visibleTitleSuggestions,
+} from "../../utils/titleSuggestions";
 import type { GuestWork } from "../../utils/guestStorage";
 
 type Nav = NativeStackNavigationProp<ReviewStackParamList, "ContentConfirm">;
@@ -54,13 +59,19 @@ export function ContentConfirmScreen() {
   // 재검색은 플랜 무관 세션당 최대 3회
   const MAX_RESEARCH = 3;
   const [researchCount, setResearchCount] = useState(0);
+  // 지금 검색 중인 제목. 정정 제목 칩을 탭하면 바뀐다 — 재검색·직접 입력도 이 제목을 따른다.
+  // 원래 입력(title)은 saveVerifiedWork 의 queryTitle 로 남겨, 다음에 같은 오타를 쳐도 별칭으로 잡히게 한다.
+  const [activeTitle, setActiveTitle] = useState(title);
+  const [triedTitles, setTriedTitles] = useState<string[]>([title]);
+  // 서버가 별칭을 찾고도 재검색할 시간이 없었을 때의 정정 제목 (ISSUE-032)
+  const [titleSuggestions, setTitleSuggestions] = useState<string[]>([]);
 
   useEffect(() => {
     fetchCandidates();
   }, []);
 
   // skipCache=true면 캐시를 건너뛰고 웹서치 강제('재검색')
-  const fetchCandidates = async (skipCache = false) => {
+  const fetchCandidates = async (skipCache = false, queryTitle = activeTitle, tried = triedTitles) => {
     if (skipCache) {
       if (researchCount >= MAX_RESEARCH) return;
       setResearchCount((c) => c + 1);
@@ -68,19 +79,23 @@ export function ContentConfirmScreen() {
     setIsLoading(true);
     setFetchError(null);
     setSelectedIndex(null);
+    setTitleSuggestions([]);
     try {
-      const response = await verifyContent({
-        title,
+      const baseRequest = {
         creator: inputCreator || undefined,
         category,
         // 게스트는 계정(users.language)이 없어 기기 언어를 따른다 — utils/llmLanguage.ts
         language: resolveLlmLanguage(user),
-        skipCache,
-        // 재검색이면 서버에 별칭(원제) 해석 패스를 강제해 다른 검색어로 다시 훑게 한다.
-        // 이게 없으면 같은 질의 → 같은 결과라 버튼이 사실상 무의미하다.
-        retry: skipCache,
-      });
+      };
+      const response = await verifyContent(
+        skipCache
+          // 재검색이면 서버에 별칭(원제) 해석 패스를 강제해 다른 검색어로 다시 훑게 한다.
+          // 이게 없으면 같은 질의 → 같은 결과라 버튼이 사실상 무의미하다.
+          ? { ...baseRequest, title: queryTitle, skipCache: true, retry: true }
+          : freshSearchRequest(baseRequest, queryTitle),
+      );
       setCandidates(response.candidates);
+      setTitleSuggestions(visibleTitleSuggestions(response, tried));
       setCacheHit(response._debug?.cache_hit === true);
       setIsSuggestion(response._debug?.suggested === true);
 
@@ -115,6 +130,14 @@ export function ContentConfirmScreen() {
     }
   };
 
+  // 정정 제목 칩 탭 → 그 제목으로 새 검색. 이미 검색한 제목은 다음 제안에서 뺀다.
+  const handleTitleSuggestion = (suggested: string) => {
+    const tried = [...triedTitles, suggested];
+    setActiveTitle(suggested);
+    setTriedTitles(tried);
+    fetchCandidates(false, suggested, tried);
+  };
+
   const handleNext = async () => {
     if (!user && !isGuest) return;
     setSaveError(null);
@@ -141,7 +164,7 @@ export function ContentConfirmScreen() {
               verified: true,
             }
           : {
-              title,
+              title: activeTitle,
               category,
               creator: manualCreator || null,
               year: manualYear ? parseInt(manualYear, 10) : null,
@@ -159,7 +182,7 @@ export function ContentConfirmScreen() {
       if (isManualMode) {
         contentData = await createContent({
           userId: user.id,
-          title,
+          title: activeTitle,
           category,
           creator: manualCreator || undefined,
           year: manualYear ? parseInt(manualYear, 10) : undefined,
@@ -205,7 +228,7 @@ export function ContentConfirmScreen() {
         {/* Header */}
         <Text className="text-text text-2xl font-bold mb-2">{t("review.confirm.title")}</Text>
         <Text className="text-text-secondary text-[15px] mb-6">
-          {CATEGORY_ICONS[category]} {title}
+          {CATEGORY_ICONS[category]} {activeTitle}
         </Text>
 
         {/* Fetch error */}
@@ -282,6 +305,22 @@ export function ContentConfirmScreen() {
         {/* No results: 재검색(최대 3회) + manual input */}
         {!isLoading && candidates.length === 0 && (
           <>
+            {/* 정정 제목 제안 (ISSUE-032): 서버가 원제·정정 표기를 찾았지만 재검색까지 못 했을 때 */}
+            {titleSuggestions.map((suggested, index) => (
+              <Pressable
+                key={suggested}
+                testID={`title-suggestion-${index}`}
+                className="bg-primary/5 border border-primary/40 rounded-2xl p-4 mb-3 items-center"
+                onPress={() => handleTitleSuggestion(suggested)}
+              >
+                <Text className="text-primary text-[15px] font-medium">
+                  {t("review.confirm.didYouMean", {
+                    title: suggested,
+                    particle: koreanObjectParticle(suggested),
+                  })}
+                </Text>
+              </Pressable>
+            ))}
             {researchCount < MAX_RESEARCH ? (
               <Pressable
                 className="border border-primary/40 rounded-2xl p-4 mb-3 items-center"

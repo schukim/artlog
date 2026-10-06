@@ -148,6 +148,7 @@
     "confirm": {
       "title": "이 작품이 맞나요?",
       "similarTitle": "비슷한 제목을 찾았어요. 이 작품이 맞나요?",
+      "didYouMean": "혹시 '{{title}}'{{particle}} 찾으시나요?",
       "research": "찾는 작품이 없나요? 재검색",
       "researchLimit": "재검색은 최대 3회까지 가능해요",
       "manualInput": "작품을 찾지 못했어요. 직접 입력할게요",
