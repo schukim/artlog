@@ -62,4 +62,12 @@ describe.skipIf(!LIVE)("generate-review 프롬프트 회귀 (live DeepSeek)", ()
       expect(thesis).toMatch(/해변|모래|구덩이|밀물|바다|사라/);
     }
   }, 180_000);
+
+  it("라이트 유저: 유효 턴 1개 이하 → 분량 150~200자", async () => {
+    for (const { review_text } of await generate(LIGHT_USER_AFFIRMED_SCENE)) {
+      const length = [...review_text.replace(/\s+/g, " ").trim()].length;
+      expect(length).toBeGreaterThanOrEqual(150);
+      expect(length).toBeLessThanOrEqual(200);
+    }
+  }, 180_000);
 });
